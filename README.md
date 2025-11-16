@@ -10,7 +10,7 @@ A simple web-based dashboard for monitoring AI agents via the Model Context Prot
 - **Team status aggregation**: Overall team status calculated from individual agent statuses
 - **Status tracking**: Agents can report four states: idle, working, warning, or error
 - **Status messages**: Each agent can set a short description of what they're working on
-- **Stale detection**: Automatically marks agents as "stale" if they haven't checked in within 5 minutes
+- **Stale detection**: Automatically marks agents as "stale" if they haven't checked in within the configured timeout (default: 5 minutes, configurable)
 - **Auto-refresh**: Dashboard updates every 2 seconds
 - **Clean web interface**: Modern, responsive design with color-coded status indicators
 - **Webhook integrations**: Subscribe to status update events via HTTP webhooks (configured via REST API or config file)
@@ -135,7 +135,7 @@ Get all registered agents and their statuses (no parameters required).
 - **Idle** (Blue): Agent is waiting for work
 - **Warning** (Yellow): Agent is having issues but attempting to resolve them
 - **Error** (Red): Agent encountered an error
-- **Stale** (Gray): Agent hasn't checked in within 5 minutes
+- **Stale** (Gray): Agent hasn't checked in within the configured timeout (default: 5 minutes)
 
 ## Teams
 
@@ -274,7 +274,36 @@ See `example_agent.py` for a sample implementation of how an agent can update it
 
 ## Configuration
 
-You can modify the stale timeout by editing the `STALE_TIMEOUT_MINUTES` variable in `dashboard.py` (default: 5 minutes).
+### Stale Timeout
+
+The dashboard marks agents as "stale" if they haven't checked in within a configurable timeout period. You can configure this timeout using the `STALE_TIMEOUT_MINUTES` environment variable.
+
+**Docker (docker-compose.yml):**
+
+Set the environment variable in your docker-compose.yml or via a .env file:
+
+```bash
+# In .env file or export before running docker-compose
+STALE_TIMEOUT_MINUTES=10
+```
+
+Or modify docker-compose.yml directly:
+
+```yaml
+environment:
+  - STALE_TIMEOUT_MINUTES=10
+```
+
+**Local Python:**
+
+Set the environment variable before starting the dashboard:
+
+```bash
+export STALE_TIMEOUT_MINUTES=10
+python dashboard.py
+```
+
+**Default:** If not specified, the timeout defaults to 5 minutes.
 
 ## File Structure
 

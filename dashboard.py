@@ -7,6 +7,7 @@ from flask import Flask, render_template, jsonify, request
 from datetime import datetime, timedelta
 from pathlib import Path
 import json
+import os
 
 app = Flask(__name__)
 
@@ -14,7 +15,8 @@ app = Flask(__name__)
 DATA_FILE = Path(__file__).parent / "agent_data.json"
 
 # Timeout in minutes before marking agent as stale
-STALE_TIMEOUT_MINUTES = 5
+# Can be configured via STALE_TIMEOUT_MINUTES environment variable
+STALE_TIMEOUT_MINUTES = int(os.getenv('STALE_TIMEOUT_MINUTES', '5'))
 
 
 def load_agent_data() -> dict:
