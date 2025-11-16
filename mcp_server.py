@@ -147,47 +147,6 @@ async def list_tools() -> list[Tool]:
                 "type": "object",
                 "properties": {}
             }
-        ),
-        Tool(
-            name="add_webhook",
-            description="Register a webhook URL to receive status update notifications",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "url": {
-                        "type": "string",
-                        "description": "The webhook URL to call when events occur"
-                    },
-                    "events": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of event types to subscribe to. Use ['all'] for all events, or specify ['status_update', 'agent_online', 'agent_offline']"
-                    }
-                },
-                "required": ["url"]
-            }
-        ),
-        Tool(
-            name="remove_webhook",
-            description="Remove a registered webhook URL",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "url": {
-                        "type": "string",
-                        "description": "The webhook URL to remove"
-                    }
-                },
-                "required": ["url"]
-            }
-        ),
-        Tool(
-            name="list_webhooks",
-            description="List all registered webhook URLs",
-            inputSchema={
-                "type": "object",
-                "properties": {}
-            }
         )
     ]
 
@@ -304,76 +263,6 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(
             type="text",
             text=json.dumps(data["agents"], indent=2)
-        )]
-
-    elif name == "add_webhook":
-        url = arguments["url"]
-        events = arguments.get("events", ["all"])
-
-        # Load current data
-        data = load_agent_data()
-
-        # Check if webhook already exists
-        existing = next((w for w in data["webhooks"] if w["url"] == url), None)
-        if existing:
-            return [TextContent(
-                type="text",
-                text=f"Webhook URL already registered: {url}"
-            )]
-
-        # Add new webhook
-        webhook = {
-            "url": url,
-            "events": events,
-            "created_at": datetime.now().isoformat()
-        }
-        data["webhooks"].append(webhook)
-
-        # Save data
-        save_agent_data(data)
-
-        return [TextContent(
-            type="text",
-            text=f"Webhook added successfully.\nURL: {url}\nEvents: {', '.join(events)}"
-        )]
-
-    elif name == "remove_webhook":
-        url = arguments["url"]
-
-        # Load current data
-        data = load_agent_data()
-
-        # Find and remove webhook
-        initial_count = len(data["webhooks"])
-        data["webhooks"] = [w for w in data["webhooks"] if w["url"] != url]
-
-        if len(data["webhooks"]) == initial_count:
-            return [TextContent(
-                type="text",
-                text=f"Webhook URL not found: {url}"
-            )]
-
-        # Save data
-        save_agent_data(data)
-
-        return [TextContent(
-            type="text",
-            text=f"Webhook removed successfully: {url}"
-        )]
-
-    elif name == "list_webhooks":
-        data = load_agent_data()
-        webhooks = data.get("webhooks", [])
-
-        if not webhooks:
-            return [TextContent(
-                type="text",
-                text="No webhooks registered"
-            )]
-
-        return [TextContent(
-            type="text",
-            text=json.dumps(webhooks, indent=2)
         )]
 
     else:

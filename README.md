@@ -13,7 +13,7 @@ A simple web-based dashboard for monitoring AI agents via the Model Context Prot
 - **Stale detection**: Automatically marks agents as "stale" if they haven't checked in within 5 minutes
 - **Auto-refresh**: Dashboard updates every 2 seconds
 - **Clean web interface**: Modern, responsive design with color-coded status indicators
-- **Webhook integrations**: Subscribe to status update events via HTTP webhooks
+- **Webhook integrations**: Subscribe to status update events via HTTP webhooks (configured via REST API or config file)
 
 ## Installation
 
@@ -149,7 +149,7 @@ Click on a team header to collapse or expand the team's agents. The collapse sta
 
 ## Webhook Integrations
 
-The dashboard supports webhook integrations to send real-time notifications when agent status updates occur. Webhooks can be managed via MCP tools or the REST API.
+The dashboard supports webhook integrations to send real-time notifications when agent status updates occur. Webhooks can be managed via the REST API or by directly editing the `agent_data.json` configuration file.
 
 ### Webhook Events
 
@@ -177,35 +177,6 @@ Webhooks receive POST requests with the following JSON payload:
   }
 }
 ```
-
-### Managing Webhooks via MCP Tools
-
-Use the following MCP tools to manage webhooks:
-
-#### add_webhook
-
-Register a new webhook URL:
-
-```python
-{
-  "url": "https://example.com/webhook",
-  "events": ["status_update", "agent_online"]  // Optional, defaults to ["all"]
-}
-```
-
-#### remove_webhook
-
-Remove a registered webhook:
-
-```python
-{
-  "url": "https://example.com/webhook"
-}
-```
-
-#### list_webhooks
-
-List all registered webhooks (no parameters required).
 
 ### Managing Webhooks via REST API
 
@@ -238,6 +209,24 @@ Remove a webhook:
 curl -X DELETE http://localhost:5000/api/webhooks \
   -H "Content-Type: application/json" \
   -d '{"url": "https://example.com/webhook"}'
+```
+
+### Managing Webhooks via Config File
+
+You can also manage webhooks by directly editing the `agent_data.json` file:
+
+```json
+{
+  "agents": {},
+  "history": {},
+  "webhooks": [
+    {
+      "url": "https://example.com/webhook",
+      "events": ["status_update", "agent_online"],
+      "created_at": "2025-11-16T12:34:56.789012"
+    }
+  ]
+}
 ```
 
 ### Webhook Delivery
