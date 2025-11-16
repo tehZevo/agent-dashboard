@@ -13,6 +13,31 @@ A simple web-based dashboard for monitoring AI agents via the Model Context Prot
 
 ## Installation
 
+### Option 1: Docker (Recommended)
+
+The easiest way to run the agent dashboard is using Docker:
+
+1. Clone this repository
+2. Start the services:
+
+```bash
+docker-compose up -d
+```
+
+The dashboard will be available at `http://localhost:5000`
+
+To view logs:
+```bash
+docker-compose logs -f
+```
+
+To stop the services:
+```bash
+docker-compose down
+```
+
+### Option 2: Local Python Installation
+
 1. Clone this repository
 2. Install dependencies:
 
@@ -21,6 +46,16 @@ pip install -r requirements.txt
 ```
 
 ## Usage
+
+### Docker Usage
+
+If you're using Docker (recommended), both services are already running after `docker-compose up`. You can:
+
+- Access the dashboard at `http://localhost:5000`
+- Configure MCP clients to connect to the containerized MCP server
+- Data persists in `agent_data.json` in your project directory
+
+### Local Python Usage
 
 ### 1. Start the MCP Server
 
@@ -115,6 +150,9 @@ agent-dashboard/
 ├── agent_data.json       # Agent status data (auto-generated)
 ├── example_agent.py      # Example agent implementation
 ├── requirements.txt      # Python dependencies
+├── Dockerfile            # Docker image configuration
+├── docker-compose.yml    # Docker Compose orchestration
+├── .dockerignore         # Docker build ignore patterns
 └── README.md            # This file
 ```
 
