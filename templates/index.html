@@ -26,11 +26,11 @@
                     <span id="last-update">Last update: Never</span>
                     <span class="separator">|</span>
                     <span class="status-legend">
-                        <span class="legend-item"><span class="status-dot working"></span> Working</span>
-                        <span class="legend-item"><span class="status-dot idle"></span> Idle</span>
-                        <span class="legend-item"><span class="status-dot warning"></span> Warning</span>
-                        <span class="legend-item"><span class="status-dot error"></span> Error</span>
-                        <span class="legend-item"><span class="status-dot stale"></span> Stale</span>
+                        <span class="legend-item"><span class="status-dot working"></span> Working <span id="count-working" class="status-count">(0)</span></span>
+                        <span class="legend-item"><span class="status-dot idle"></span> Idle <span id="count-idle" class="status-count">(0)</span></span>
+                        <span class="legend-item"><span class="status-dot warning"></span> Warning <span id="count-warning" class="status-count">(0)</span></span>
+                        <span class="legend-item"><span class="status-dot error"></span> Error <span id="count-error" class="status-count">(0)</span></span>
+                        <span class="legend-item"><span class="status-dot stale"></span> Stale <span id="count-stale" class="status-count">(0)</span></span>
                     </span>
                 </div>
             </div>
@@ -418,9 +418,35 @@
 
                 const totalAgents = data.agents ? data.agents.length : 0;
 
+                // Calculate status counts
+                const statusCounts = {
+                    working: 0,
+                    idle: 0,
+                    warning: 0,
+                    error: 0,
+                    stale: 0
+                };
+
+                if (data.agents) {
+                    data.agents.forEach(agent => {
+                        const status = agent.display_status;
+                        if (statusCounts.hasOwnProperty(status)) {
+                            statusCounts[status]++;
+                        }
+                    });
+                }
+
                 // Update agent count
                 agentCount.textContent = `${totalAgents} agent${totalAgents !== 1 ? 's' : ''}`;
                 lastUpdate.textContent = `Last update: ${new Date().toLocaleTimeString()}`;
+
+                // Update status counts
+                Object.keys(statusCounts).forEach(status => {
+                    const countElement = document.getElementById(`count-${status}`);
+                    if (countElement) {
+                        countElement.textContent = `(${statusCounts[status]})`;
+                    }
+                });
 
                 // Detect state changes for notifications
                 if (data.agents) {
