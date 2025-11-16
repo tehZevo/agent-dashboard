@@ -4,8 +4,10 @@ from datetime import datetime
 from lib.data_io import load_data, save_data
 from lib.status import get_display_status, calc_team_status, STALE_TIMEOUT
 from lib.history import calc_24h_breakdown
+from lib.team_routes import team_bp
 
 app = Flask(__name__)
+app.register_blueprint(team_bp)
 
 @app.route('/')
 def index():
@@ -164,153 +166,6 @@ def remove_webhook():
 
     save_data(data)
     return jsonify({"message": "Webhook removed successfully"})
-
-@app.route('/api/teams', methods=['GET'])
-def get_teams():
-    """API endpoint to get all team configurations"""
-    data = load_agent_data()
-    teams_list = []
-
-    for team_id, team_config in data.get("teams", {}).items():
-        teams_list.append({
-            "id": team_id,
-            "name": team_config.get("name", team_id),
-            "description": team_config.get("description", ""),
-            "agent_ids": team_config.get("agent_ids", [])
-        })
-
-    return jsonify({
-        "teams": teams_list
-    })
-
-
-@app.route('/api/teams', methods=['POST'])
-def create_team():
-    """API endpoint to create a new team"""
-    team_data = request.get_json()
-
-    if not team_data or "id" not in team_data:
-        return jsonify({"error": "Team ID is required"}), 400
-
-    team_id = team_data["id"]
-    team_name = team_data.get("name", team_id)
-    team_description = team_data.get("description", "")
-    agent_ids = team_data.get("agent_ids", [])
-
-    # Load current data
-    data = load_agent_data()
-
-    # Check if team already exists
-    if team_id in data["teams"]:
-        return jsonify({"error": f"Team '{team_id}' already exists"}), 400
-
-    # Create new team
-    data["teams"][team_id] = {
-        "name": team_name,
-        "description": team_description,
-        "agent_ids": agent_ids
-    }
-
-    # Save data
-    save_agent_data(data)
-
-    return jsonify({
-        "message": "Team created successfully",
-        "team": {
-            "id": team_id,
-            "name": team_name,
-            "description": team_description,
-            "agent_ids": agent_ids
-        }
-    }), 201
-
-
-@app.route('/api/teams/<team_id>', methods=['PUT'])
-def update_team(team_id):
-    """API endpoint to update a team configuration"""
-    team_data = request.get_json()
-
-    if not team_data:
-        return jsonify({"error": "Team data is required"}), 400
-
-    # Load current data
-    data = load_agent_data()
-
-    # Check if team exists
-    if team_id not in data["teams"]:
-        return jsonify({"error": f"Team '{team_id}' not found"}), 404
-
-    # Update team
-    if "name" in team_data:
-        data["teams"][team_id]["name"] = team_data["name"]
-    if "description" in team_data:
-        data["teams"][team_id]["description"] = team_data["description"]
-    if "agent_ids" in team_data:
-        data["teams"][team_id]["agent_ids"] = team_data["agent_ids"]
-
-    # Save data
-    save_agent_data(data)
-
-    return jsonify({
-        "message": "Team updated successfully",
-        "team": {
-            "id": team_id,
-            "name": data["teams"][team_id]["name"],
-            "description": data["teams"][team_id]["description"],
-            "agent_ids": data["teams"][team_id]["agent_ids"]
-        }
-    })
-
-
-@app.route('/api/teams/<team_id>/agents/<agent_id>', methods=['POST'])
-def add_agent_to_team(team_id, agent_id):
-    """API endpoint to add an agent to a team"""
-    data = load_agent_data()
-
-    # Check if team exists
-    if team_id not in data["teams"]:
-        return jsonify({"error": f"Team '{team_id}' not found"}), 404
-
-    # Add agent to team if not already present
-    if agent_id not in data["teams"][team_id]["agent_ids"]:
-        data["teams"][team_id]["agent_ids"].append(agent_id)
-
-        # Save data
-        save_agent_data(data)
-
-        return jsonify({
-            "message": f"Agent '{agent_id}' added to team '{team_id}'"
-        })
-    else:
-        return jsonify({
-            "message": f"Agent '{agent_id}' is already in team '{team_id}'"
-        })
-
-
-@app.route('/api/teams/<team_id>/agents/<agent_id>', methods=['DELETE'])
-def remove_agent_from_team(team_id, agent_id):
-    """API endpoint to remove an agent from a team"""
-    data = load_agent_data()
-
-    # Check if team exists
-    if team_id not in data["teams"]:
-        return jsonify({"error": f"Team '{team_id}' not found"}), 404
-
-    # Remove agent from team
-    if agent_id in data["teams"][team_id]["agent_ids"]:
-        data["teams"][team_id]["agent_ids"].remove(agent_id)
-
-        # Save data
-        save_agent_data(data)
-
-        return jsonify({
-            "message": f"Agent '{agent_id}' removed from team '{team_id}'"
-        })
-    else:
-        return jsonify({
-            "error": f"Agent '{agent_id}' is not in team '{team_id}'"
-        }), 404
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
