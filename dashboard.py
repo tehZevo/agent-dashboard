@@ -24,8 +24,8 @@ def load_agent_data() -> dict:
             with open(DATA_FILE, 'r') as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
-            return {"agents": {}}
-    return {"agents": {}}
+            return {"agents": {}, "history": {}}
+    return {"agents": {}, "history": {}}
 
 
 def get_agent_display_status(last_checkin_str: str, task_status: str) -> dict:
@@ -175,6 +175,33 @@ def get_config():
     return jsonify({
         "stale_timeout_minutes": STALE_TIMEOUT_MINUTES
     })
+
+
+@app.route('/api/history')
+def get_history():
+    """API endpoint to get history for all agents and teams"""
+    data = load_agent_data()
+    history = data.get("history", {})
+
+    # Process history to include display status for each entry
+    processed_history = {}
+    for key, entries in history.items():
+        processed_entries = []
+        for entry in entries:
+            display_status = get_agent_display_status(
+                entry.get("timestamp", ""),
+                entry.get("status", "unknown")
+            )
+            processed_entry = {
+                **entry,
+                "display_status": display_status["status"],
+                "display_color": display_status["color"],
+                "display_label": display_status["label"]
+            }
+            processed_entries.append(processed_entry)
+        processed_history[key] = processed_entries
+
+    return jsonify(processed_history)
 
 
 if __name__ == '__main__':

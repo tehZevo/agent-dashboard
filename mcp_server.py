@@ -25,8 +25,8 @@ def load_agent_data() -> dict:
             with open(DATA_FILE, 'r') as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
-            return {"agents": {}}
-    return {"agents": {}}
+            return {"agents": {}, "history": {}}
+    return {"agents": {}, "history": {}}
 
 
 def save_agent_data(data: dict) -> None:
@@ -108,16 +108,56 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         # Load current data
         data = load_agent_data()
 
+        # Ensure history structure exists
+        if "history" not in data:
+            data["history"] = {}
+
+        # Current timestamp
+        now = datetime.now().isoformat()
+
         # Update agent status
         data["agents"][agent_id] = {
             "status_message": status_message,
             "task_status": task_status,
-            "last_checkin": datetime.now().isoformat()
+            "last_checkin": now
         }
 
         # Add team if provided
         if team:
             data["agents"][agent_id]["team"] = team
+
+        # Record history entry for agent
+        if agent_id not in data["history"]:
+            data["history"][agent_id] = []
+
+        # Add history entry (keep last 100 entries)
+        data["history"][agent_id].append({
+            "timestamp": now,
+            "status": task_status,
+            "message": status_message,
+            "team": team
+        })
+
+        # Keep only last 100 history entries per agent
+        if len(data["history"][agent_id]) > 100:
+            data["history"][agent_id] = data["history"][agent_id][-100:]
+
+        # Record history entry for team if agent belongs to one
+        if team:
+            team_history_key = f"team:{team}"
+            if team_history_key not in data["history"]:
+                data["history"][team_history_key] = []
+
+            data["history"][team_history_key].append({
+                "timestamp": now,
+                "status": task_status,
+                "message": status_message,
+                "agent_id": agent_id
+            })
+
+            # Keep only last 100 history entries per team
+            if len(data["history"][team_history_key]) > 100:
+                data["history"][team_history_key] = data["history"][team_history_key][-100:]
 
         # Save data
         save_agent_data(data)

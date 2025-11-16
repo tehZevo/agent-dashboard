@@ -34,6 +34,7 @@
         const REFRESH_INTERVAL = 2000; // Refresh every 2 seconds
         let staleTimeoutMinutes = 5;
         let collapsedTeams = new Set(); // Track which teams are collapsed
+        let historyData = {}; // Store history data
 
         // Format datetime string
         function formatDateTime(isoString) {
@@ -82,6 +83,31 @@
             renderDashboard();
         }
 
+        // Render history visualization
+        function renderHistory(historyKey, maxEntries = 20) {
+            const history = historyData[historyKey] || [];
+            if (history.length === 0) {
+                return '<div class="history-empty">No history</div>';
+            }
+
+            // Get last N entries
+            const recentHistory = history.slice(-maxEntries);
+
+            // Render as colored blocks with tooltips
+            const blocks = recentHistory.map(entry => {
+                const timestamp = formatDateTime(entry.timestamp);
+                const timeAgoStr = timeAgo(entry.timestamp);
+                const message = escapeHtml(entry.message || 'No message');
+                const status = entry.display_status || entry.status || 'unknown';
+                const label = entry.display_label || status;
+
+                return `<div class="history-block ${status}"
+                    title="${label} - ${timeAgoStr}&#10;${message}&#10;${timestamp}"></div>`;
+            }).join('');
+
+            return `<div class="history-timeline">${blocks}</div>`;
+        }
+
         // Render agent card HTML
         function renderAgentCard(agent) {
             return `
@@ -97,6 +123,10 @@
                     </div>
                     <div class="agent-message">
                         ${escapeHtml(agent.status_message || 'No status message')}
+                    </div>
+                    <div class="agent-history">
+                        <div class="history-label">History:</div>
+                        ${renderHistory(agent.id)}
                     </div>
                     <div class="agent-footer">
                         <span class="checkin-time" title="${formatDateTime(agent.last_checkin)}">
@@ -130,6 +160,7 @@
             teams.forEach(team => {
                 const isCollapsed = collapsedTeams.has(team.name);
                 const chevron = isCollapsed ? '▶' : '▼';
+                const teamHistoryKey = `team:${team.name}`;
 
                 html += `
                     <div class="team-section">
@@ -140,9 +171,15 @@
                                 <h2 class="team-name">${escapeHtml(team.name)}</h2>
                                 <span class="team-count">(${team.agent_count} agent${team.agent_count !== 1 ? 's' : ''})</span>
                             </div>
-                            <div class="status-badge ${team.status}">
-                                ${escapeHtml(team.label)}
+                            <div class="team-header-right">
+                                <div class="status-badge ${team.status}">
+                                    ${escapeHtml(team.label)}
+                                </div>
                             </div>
+                        </div>
+                        <div class="team-history-section">
+                            <div class="history-label">Team History:</div>
+                            ${renderHistory(teamHistoryKey, 30)}
                         </div>
                         <div class="team-agents ${isCollapsed ? 'collapsed' : ''}">
                             <div class="agents-grid">
@@ -175,11 +212,28 @@
             container.innerHTML = html;
         }
 
+        // Fetch history data
+        async function updateHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const data = await response.json();
+                historyData = data;
+            } catch (error) {
+                console.error('Error fetching history:', error);
+            }
+        }
+
         // Fetch and display agents
         async function updateAgents() {
             try {
-                const response = await fetch('/api/agents');
-                const data = await response.json();
+                // Fetch both agents and history in parallel
+                const [agentsResponse, historyResponse] = await Promise.all([
+                    fetch('/api/agents'),
+                    fetch('/api/history')
+                ]);
+
+                const data = await agentsResponse.json();
+                historyData = await historyResponse.json();
 
                 const agentCount = document.getElementById('agent-count');
                 const lastUpdate = document.getElementById('last-update');
