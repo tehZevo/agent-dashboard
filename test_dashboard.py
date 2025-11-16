@@ -21,27 +21,37 @@ def create_test_data():
             "agent-001": {
                 "status_message": "Processing customer requests",
                 "task_status": "working",
-                "last_checkin": now.isoformat()
+                "last_checkin": now.isoformat(),
+                "description": "Handles customer service requests and inquiries",
+                "role": "Customer Service Agent"
             },
             "agent-002": {
                 "status_message": "Idle, waiting for tasks",
                 "task_status": "idle",
-                "last_checkin": (now - timedelta(minutes=1)).isoformat()
+                "last_checkin": (now - timedelta(minutes=1)).isoformat(),
+                "description": "Processes background tasks and batch jobs",
+                "role": "Background Worker"
             },
             "agent-003": {
                 "status_message": "Database connection failed",
                 "task_status": "error",
-                "last_checkin": (now - timedelta(minutes=2)).isoformat()
+                "last_checkin": (now - timedelta(minutes=2)).isoformat(),
+                "description": "Manages database operations and data persistence",
+                "role": "Database Manager"
             },
             "agent-004": {
                 "status_message": "Running data analysis pipeline",
                 "task_status": "working",
-                "last_checkin": (now - timedelta(seconds=30)).isoformat()
+                "last_checkin": (now - timedelta(seconds=30)).isoformat(),
+                "description": "Analyzes data and generates insights",
+                "role": "Data Analyst"
             },
             "agent-005": {
                 "status_message": "Last seen over 5 minutes ago",
                 "task_status": "working",
-                "last_checkin": (now - timedelta(minutes=10)).isoformat()
+                "last_checkin": (now - timedelta(minutes=10)).isoformat(),
+                "description": "Monitors system health and performance metrics",
+                "role": "System Monitor"
             }
         }
     }

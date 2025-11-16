@@ -251,6 +251,8 @@ def get_agents():
             "display_color": display_status["color"],
             "display_label": display_status["label"],
             "team": agent_info.get("team", None),
+            "description": agent_info.get("description", None),
+            "role": agent_info.get("role", None),
             "breakdown_24h": breakdown_24h
         }
 
