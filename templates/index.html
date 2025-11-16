@@ -171,6 +171,50 @@
             return `<div class="history-timeline">${blocks}</div>`;
         }
 
+        // Render 24h breakdown
+        function render24hBreakdown(breakdown) {
+            if (!breakdown) {
+                return '<div class="breakdown-empty">No breakdown data</div>';
+            }
+
+            // Filter out zero values and sort by percentage (descending)
+            const entries = Object.entries(breakdown)
+                .filter(([_, pct]) => pct > 0)
+                .sort((a, b) => b[1] - a[1]);
+
+            if (entries.length === 0) {
+                return '<div class="breakdown-empty">No data</div>';
+            }
+
+            // Create horizontal bars
+            const bars = entries.map(([status, percentage]) => {
+                // Map status to label
+                const statusLabels = {
+                    'working': 'Active',
+                    'idle': 'Idle',
+                    'warning': 'Warning',
+                    'error': 'Error',
+                    'offline': 'Offline'
+                };
+                const label = statusLabels[status] || status;
+
+                return `
+                    <div class="breakdown-bar-container">
+                        <div class="breakdown-label">
+                            <span class="status-dot ${status}"></span>
+                            ${label}
+                        </div>
+                        <div class="breakdown-bar-wrapper">
+                            <div class="breakdown-bar ${status}" style="width: ${percentage}%"></div>
+                        </div>
+                        <div class="breakdown-percentage">${percentage}%</div>
+                    </div>
+                `;
+            }).join('');
+
+            return `<div class="breakdown-24h">${bars}</div>`;
+        }
+
         // Render agent card HTML
         function renderAgentCard(agent) {
             return `
@@ -191,6 +235,10 @@
                     </div>
                     <div class="agent-message">
                         ${escapeHtml(agent.status_message || 'No status message')}
+                    </div>
+                    <div class="agent-breakdown">
+                        <div class="breakdown-label-header">Last 24h Breakdown:</div>
+                        ${render24hBreakdown(agent.breakdown_24h)}
                     </div>
                     <div class="agent-history">
                         <div class="history-label">History:</div>
