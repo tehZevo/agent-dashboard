@@ -111,6 +111,69 @@ header h1 {
     gap: 10px;
 }
 
+.controls {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.search-box {
+    width: 100%;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 14px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    outline: none;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    transition: border-color 0.2s, background 0.3s ease;
+}
+
+.search-box input:focus {
+    border-color: var(--bg-gradient-start);
+}
+
+.filter-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.filter-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.status-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+}
+
+.filter-checkbox input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
 .separator {
     color: var(--separator-color);
 }
@@ -415,5 +478,10 @@ header h1 {
 
     .separator {
         display: none;
+    }
+
+    .status-filters {
+        flex-direction: column;
+        gap: 10px;
     }
 }
