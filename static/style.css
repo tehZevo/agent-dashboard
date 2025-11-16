@@ -1,3 +1,66 @@
+:root {
+    /* Light mode colors */
+    --bg-gradient-start: #667eea;
+    --bg-gradient-end: #764ba2;
+    --card-bg: #ffffff;
+    --card-hover-bg: #f9fafb;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-tertiary: #999999;
+    --text-muted: #555555;
+    --border-color: #eeeeee;
+    --separator-color: #cccccc;
+    --shadow: rgba(0, 0, 0, 0.1);
+    --shadow-hover: rgba(0, 0, 0, 0.15);
+
+    /* Status colors (same in both modes) */
+    --status-working: #10b981;
+    --status-idle: #3b82f6;
+    --status-warning: #f59e0b;
+    --status-error: #ef4444;
+    --status-stale: #9ca3af;
+
+    /* Status badge backgrounds - light mode */
+    --badge-working-bg: #d1fae5;
+    --badge-working-text: #065f46;
+    --badge-idle-bg: #dbeafe;
+    --badge-idle-text: #1e40af;
+    --badge-warning-bg: #fef3c7;
+    --badge-warning-text: #92400e;
+    --badge-error-bg: #fee2e2;
+    --badge-error-text: #991b1b;
+    --badge-stale-bg: #f3f4f6;
+    --badge-stale-text: #4b5563;
+}
+
+[data-theme="dark"] {
+    /* Dark mode colors */
+    --bg-gradient-start: #1a1f3a;
+    --bg-gradient-end: #2d1b3d;
+    --card-bg: #1f2937;
+    --card-hover-bg: #374151;
+    --text-primary: #f3f4f6;
+    --text-secondary: #d1d5db;
+    --text-tertiary: #9ca3af;
+    --text-muted: #d1d5db;
+    --border-color: #374151;
+    --separator-color: #4b5563;
+    --shadow: rgba(0, 0, 0, 0.3);
+    --shadow-hover: rgba(0, 0, 0, 0.4);
+
+    /* Status badge backgrounds - dark mode */
+    --badge-working-bg: #064e3b;
+    --badge-working-text: #6ee7b7;
+    --badge-idle-bg: #1e3a8a;
+    --badge-idle-text: #93c5fd;
+    --badge-warning-bg: #78350f;
+    --badge-warning-text: #fcd34d;
+    --badge-error-bg: #7f1d1d;
+    --badge-error-text: #fca5a5;
+    --badge-stale-bg: #374151;
+    --badge-stale-text: #d1d5db;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -6,9 +69,10 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
     min-height: 100vh;
     padding: 20px;
+    transition: background 0.3s ease;
 }
 
 .container {
@@ -17,12 +81,17 @@ body {
 }
 
 header {
-    background: white;
+    background: var(--card-bg);
     padding: 30px;
     border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 6px var(--shadow);
     margin-bottom: 30px;
     position: relative;
+    transition: background 0.3s ease;
+}
+
+.header-content {
+    flex: 1;
 }
 
 .header-top {
@@ -33,13 +102,13 @@ header {
 }
 
 header h1 {
-    color: #333;
+    color: var(--text-primary);
     font-size: 32px;
     margin: 0;
 }
 
 .header-info {
-    color: #666;
+    color: var(--text-secondary);
     font-size: 14px;
     display: flex;
     align-items: center;
@@ -50,10 +119,32 @@ header h1 {
 .controls {
     margin-top: 25px;
     padding-top: 20px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     gap: 15px;
+}
+
+@media (min-width: 769px) {
+    .controls {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+    }
+
+    .search-box {
+        flex: 1;
+        max-width: 300px;
+    }
+
+    .filter-controls {
+        flex: 1;
+    }
+
+    .theme-toggle {
+        flex-shrink: 0;
+        align-self: flex-start;
+    }
 }
 
 .search-box {
@@ -64,14 +155,16 @@ header h1 {
     width: 100%;
     padding: 10px 15px;
     font-size: 14px;
-    border: 2px solid #e5e7eb;
+    border: 2px solid var(--border-color);
     border-radius: 6px;
     outline: none;
-    transition: border-color 0.2s;
+    background: var(--card-bg);
+    color: var(--text-primary);
+    transition: border-color 0.2s, background 0.3s ease;
 }
 
 .search-box input:focus {
-    border-color: #667eea;
+    border-color: var(--bg-gradient-start);
 }
 
 .filter-controls {
@@ -83,7 +176,7 @@ header h1 {
 .filter-label {
     font-size: 14px;
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .status-filters {
@@ -97,7 +190,7 @@ header h1 {
     align-items: center;
     gap: 6px;
     font-size: 14px;
-    color: #555;
+    color: var(--text-muted);
     cursor: pointer;
     user-select: none;
 }
@@ -109,7 +202,26 @@ header h1 {
 }
 
 .separator {
-    color: #ccc;
+    color: var(--separator-color);
+}
+
+.theme-toggle {
+    background: none;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+}
+
+.theme-toggle:hover {
+    background: var(--card-hover-bg);
+    transform: scale(1.05);
 }
 
 .status-legend {
@@ -297,11 +409,12 @@ header h1 {
 
 /* Team sections */
 .team-section {
-    background: white;
+    background: var(--card-bg);
     border-radius: 10px;
     margin-bottom: 20px;
     overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px var(--shadow);
+    transition: background 0.3s ease;
 }
 
 .team-header {
@@ -312,40 +425,40 @@ header h1 {
     justify-content: space-between;
     align-items: center;
     transition: background-color 0.2s;
-    border-left: 4px solid #ccc;
+    border-left: 4px solid var(--separator-color);
 }
 
 .team-header:hover {
-    background-color: #f9fafb;
+    background-color: var(--card-hover-bg);
 }
 
 .team-header.working {
-    border-left-color: #10b981;
+    border-left-color: var(--status-working);
 }
 
 .team-header.idle {
-    border-left-color: #3b82f6;
+    border-left-color: var(--status-idle);
 }
 
 .team-header.warning {
-    border-left-color: #f59e0b;
+    border-left-color: var(--status-warning);
 }
 
 .team-header.error {
-    border-left-color: #ef4444;
+    border-left-color: var(--status-error);
 }
 
 .team-header.stale {
-    border-left-color: #9ca3af;
+    border-left-color: var(--status-stale);
 }
 
 .team-header.unassigned {
-    border-left-color: #9ca3af;
+    border-left-color: var(--separator-color);
     cursor: default;
 }
 
 .team-header.unassigned:hover {
-    background-color: white;
+    background-color: var(--card-bg);
 }
 
 .team-info {
@@ -356,20 +469,20 @@ header h1 {
 
 .team-chevron {
     font-size: 14px;
-    color: #666;
+    color: var(--text-secondary);
     width: 20px;
     transition: transform 0.2s;
 }
 
 .team-name {
     font-size: 20px;
-    color: #333;
+    color: var(--text-primary);
     margin: 0;
 }
 
 .team-count {
     font-size: 14px;
-    color: #666;
+    color: var(--text-secondary);
 }
 
 .team-agents {
@@ -391,37 +504,37 @@ header h1 {
 }
 
 .agent-card {
-    background: white;
+    background: var(--card-bg);
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
-    border-left: 4px solid #ccc;
+    box-shadow: 0 2px 4px var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.3s ease;
+    border-left: 4px solid var(--separator-color);
 }
 
 .agent-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 8px var(--shadow-hover);
 }
 
 .agent-card.working {
-    border-left-color: #10b981;
+    border-left-color: var(--status-working);
 }
 
 .agent-card.idle {
-    border-left-color: #3b82f6;
+    border-left-color: var(--status-idle);
 }
 
 .agent-card.warning {
-    border-left-color: #f59e0b;
+    border-left-color: var(--status-warning);
 }
 
 .agent-card.error {
-    border-left-color: #ef4444;
+    border-left-color: var(--status-error);
 }
 
 .agent-card.stale {
-    border-left-color: #9ca3af;
+    border-left-color: var(--status-stale);
     opacity: 0.7;
 }
 
@@ -437,7 +550,7 @@ header h1 {
     align-items: center;
     gap: 8px;
     font-size: 18px;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .status-dot {
@@ -449,23 +562,23 @@ header h1 {
 }
 
 .status-dot.working {
-    background-color: #10b981;
+    background-color: var(--status-working);
 }
 
 .status-dot.idle {
-    background-color: #3b82f6;
+    background-color: var(--status-idle);
 }
 
 .status-dot.warning {
-    background-color: #f59e0b;
+    background-color: var(--status-warning);
 }
 
 .status-dot.error {
-    background-color: #ef4444;
+    background-color: var(--status-error);
 }
 
 .status-dot.stale {
-    background-color: #9ca3af;
+    background-color: var(--status-stale);
     animation: none;
 }
 
@@ -487,32 +600,32 @@ header h1 {
 }
 
 .status-badge.working {
-    background-color: #d1fae5;
-    color: #065f46;
+    background-color: var(--badge-working-bg);
+    color: var(--badge-working-text);
 }
 
 .status-badge.idle {
-    background-color: #dbeafe;
-    color: #1e40af;
+    background-color: var(--badge-idle-bg);
+    color: var(--badge-idle-text);
 }
 
 .status-badge.warning {
-    background-color: #fef3c7;
-    color: #92400e;
+    background-color: var(--badge-warning-bg);
+    color: var(--badge-warning-text);
 }
 
 .status-badge.error {
-    background-color: #fee2e2;
-    color: #991b1b;
+    background-color: var(--badge-error-bg);
+    color: var(--badge-error-text);
 }
 
 .status-badge.stale {
-    background-color: #f3f4f6;
-    color: #4b5563;
+    background-color: var(--badge-stale-bg);
+    color: var(--badge-stale-text);
 }
 
 .agent-message {
-    color: #555;
+    color: var(--text-muted);
     font-size: 14px;
     line-height: 1.5;
     margin-bottom: 15px;
@@ -524,8 +637,8 @@ header h1 {
     justify-content: space-between;
     align-items: center;
     font-size: 12px;
-    color: #999;
-    border-top: 1px solid #eee;
+    color: var(--text-tertiary);
+    border-top: 1px solid var(--border-color);
     padding-top: 10px;
 }
 
@@ -534,16 +647,100 @@ header h1 {
 }
 
 .loading, .no-agents, .error {
-    background: white;
+    background: var(--card-bg);
     padding: 40px;
     border-radius: 8px;
     text-align: center;
-    color: #666;
+    color: var(--text-secondary);
     font-size: 18px;
+    transition: background 0.3s ease;
 }
 
 .error {
-    color: #ef4444;
+    color: var(--status-error);
+}
+
+/* History visualization */
+.agent-history {
+    margin-bottom: 15px;
+}
+
+.history-label {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.history-timeline {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.history-block {
+    width: 12px;
+    height: 24px;
+    border-radius: 3px;
+    cursor: help;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.history-block:hover {
+    transform: scale(1.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.history-block.working {
+    background-color: #10b981;
+}
+
+.history-block.idle {
+    background-color: #3b82f6;
+}
+
+.history-block.warning {
+    background-color: #f59e0b;
+}
+
+.history-block.error {
+    background-color: #ef4444;
+}
+
+.history-block.stale {
+    background-color: #9ca3af;
+}
+
+.history-block.unknown {
+    background-color: #d1d5db;
+}
+
+.history-empty {
+    font-size: 12px;
+    color: #ccc;
+    font-style: italic;
+}
+
+/* Team history section */
+.team-history-section {
+    padding: 15px 25px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.team-history-section .history-timeline {
+    margin-top: 5px;
+}
+
+.team-header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 
 @media (max-width: 768px) {
@@ -573,6 +770,15 @@ header h1 {
 
     header h1 {
         font-size: 24px;
+    }
+
+    .history-timeline {
+        gap: 2px;
+    }
+
+    .history-block {
+        width: 10px;
+        height: 20px;
     }
 
     .status-filters {
