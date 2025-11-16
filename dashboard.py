@@ -3,7 +3,7 @@
 Agent Dashboard Web Interface
 Displays agent statuses in a web interface with auto-refresh
 """
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from datetime import datetime, timedelta
 from pathlib import Path
 import json
@@ -22,10 +22,14 @@ def load_agent_data() -> dict:
     if DATA_FILE.exists():
         try:
             with open(DATA_FILE, 'r') as f:
-                return json.load(f)
+                data = json.load(f)
+                # Ensure webhooks key exists
+                if "webhooks" not in data:
+                    data["webhooks"] = []
+                return data
         except (json.JSONDecodeError, IOError):
-            return {"agents": {}}
-    return {"agents": {}}
+            return {"agents": {}, "webhooks": []}
+    return {"agents": {}, "webhooks": []}
 
 
 def save_agent_data(data: dict) -> None:
@@ -218,6 +222,79 @@ def delete_team(team_name):
         "success": True,
         "message": f"Deleted {len(agents_to_delete)} agent(s) from team '{team_name}'",
         "deleted_count": len(agents_to_delete)
+    })
+
+
+@app.route('/api/webhooks', methods=['GET'])
+def get_webhooks():
+    """API endpoint to get all registered webhooks"""
+    data = load_agent_data()
+    return jsonify({
+        "webhooks": data.get("webhooks", [])
+    })
+
+
+@app.route('/api/webhooks', methods=['POST'])
+def add_webhook():
+    """API endpoint to add a new webhook"""
+    webhook_data = request.get_json()
+
+    if not webhook_data or "url" not in webhook_data:
+        return jsonify({"error": "URL is required"}), 400
+
+    url = webhook_data["url"]
+    events = webhook_data.get("events", ["all"])
+
+    # Load current data
+    data = load_agent_data()
+
+    # Check if webhook already exists
+    existing = next((w for w in data["webhooks"] if w["url"] == url), None)
+    if existing:
+        return jsonify({"error": "Webhook URL already registered"}), 400
+
+    # Add new webhook
+    webhook = {
+        "url": url,
+        "events": events,
+        "created_at": datetime.now().isoformat()
+    }
+    data["webhooks"].append(webhook)
+
+    # Save data
+    save_agent_data(data)
+
+    return jsonify({
+        "message": "Webhook added successfully",
+        "webhook": webhook
+    }), 201
+
+
+@app.route('/api/webhooks', methods=['DELETE'])
+def remove_webhook():
+    """API endpoint to remove a webhook"""
+    webhook_data = request.get_json()
+
+    if not webhook_data or "url" not in webhook_data:
+        return jsonify({"error": "URL is required"}), 400
+
+    url = webhook_data["url"]
+
+    # Load current data
+    data = load_agent_data()
+
+    # Find and remove webhook
+    initial_count = len(data["webhooks"])
+    data["webhooks"] = [w for w in data["webhooks"] if w["url"] != url]
+
+    if len(data["webhooks"]) == initial_count:
+        return jsonify({"error": "Webhook URL not found"}), 404
+
+    # Save data
+    save_agent_data(data)
+
+    return jsonify({
+        "message": "Webhook removed successfully"
     })
 
 

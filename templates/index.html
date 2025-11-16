@@ -9,19 +9,55 @@
 <body>
     <div class="container">
         <header>
-            <h1>Agent Dashboard</h1>
-            <div class="header-info">
-                <span id="agent-count">0 agents</span>
-                <span class="separator">|</span>
-                <span id="last-update">Last update: Never</span>
-                <span class="separator">|</span>
-                <span class="status-legend">
-                    <span class="legend-item"><span class="status-dot working"></span> Working</span>
-                    <span class="legend-item"><span class="status-dot idle"></span> Idle</span>
-                    <span class="legend-item"><span class="status-dot warning"></span> Warning</span>
-                    <span class="legend-item"><span class="status-dot error"></span> Error</span>
-                    <span class="legend-item"><span class="status-dot stale"></span> Stale</span>
-                </span>
+            <div class="header-content">
+                <h1>Agent Dashboard</h1>
+                <div class="header-info">
+                    <span id="agent-count">0 agents</span>
+                    <span class="separator">|</span>
+                    <span id="last-update">Last update: Never</span>
+                    <span class="separator">|</span>
+                    <span class="status-legend">
+                        <span class="legend-item"><span class="status-dot working"></span> Working</span>
+                        <span class="legend-item"><span class="status-dot idle"></span> Idle</span>
+                        <span class="legend-item"><span class="status-dot warning"></span> Warning</span>
+                        <span class="legend-item"><span class="status-dot error"></span> Error</span>
+                        <span class="legend-item"><span class="status-dot stale"></span> Stale</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="search-box">
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="Search agents by name..."
+                        autocomplete="off"
+                    >
+                </div>
+                <div class="filter-controls">
+                    <label class="filter-label">Filter by status:</label>
+                    <div class="status-filters">
+                        <label class="filter-checkbox">
+                            <input type="checkbox" value="working" checked> Working
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" value="idle" checked> Idle
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" value="warning" checked> Warning
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" value="error" checked> Error
+                        </label>
+                        <label class="filter-checkbox">
+                            <input type="checkbox" value="stale" checked> Stale
+                        </label>
+                    </div>
+                </div>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+                    <span id="theme-icon">🌙</span>
+                </button>
             </div>
         </header>
 
@@ -31,9 +67,36 @@
     </div>
 
     <script>
+        // Theme management - Initialize before page renders
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('theme-icon');
+            if (icon) {
+                icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+            }
+        }
+
+        // Initialize theme immediately
+        initTheme();
+
         const REFRESH_INTERVAL = 2000; // Refresh every 2 seconds
         let staleTimeoutMinutes = 5;
         let collapsedTeams = new Set(); // Track which teams are collapsed
+        let searchQuery = '';
+        let statusFilters = new Set(['working', 'idle', 'warning', 'error', 'stale']); // All statuses enabled by default
 
         // Format datetime string
         function formatDateTime(isoString) {
@@ -115,6 +178,21 @@
         // Store current data for re-rendering
         let currentData = null;
 
+        // Filter agent by search query and status
+        function filterAgent(agent) {
+            // Check status filter
+            if (!statusFilters.has(agent.display_status)) {
+                return false;
+            }
+
+            // Check search query
+            if (searchQuery && !agent.id.toLowerCase().includes(searchQuery.toLowerCase())) {
+                return false;
+            }
+
+            return true;
+        }
+
         // Render the dashboard with current data
         function renderDashboard() {
             if (!currentData) return;
@@ -130,9 +208,20 @@
             }
 
             let html = '';
+            let visibleAgentCount = 0;
 
             // Render teams
             teams.forEach(team => {
+                // Filter team agents
+                const filteredAgents = team.agents.filter(filterAgent);
+
+                // Skip team if no agents match the filter
+                if (filteredAgents.length === 0) {
+                    return;
+                }
+
+                visibleAgentCount += filteredAgents.length;
+
                 const isCollapsed = collapsedTeams.has(team.name);
                 const chevron = isCollapsed ? '▶' : '▼';
 
@@ -143,7 +232,7 @@
                                 <span class="team-chevron">${chevron}</span>
                                 <span class="status-dot ${team.status}"></span>
                                 <h2 class="team-name">${escapeHtml(team.name)}</h2>
-                                <span class="team-count">(${team.agent_count} agent${team.agent_count !== 1 ? 's' : ''})</span>
+                                <span class="team-count">(${filteredAgents.length} agent${filteredAgents.length !== 1 ? 's' : ''})</span>
                             </div>
                             <div class="team-header-actions">
                                 <button class="delete-btn team-delete-btn" onclick="deleteTeam('${escapeHtml(team.name).replace(/'/g, "\\'")}', event)" title="Delete team and all agents">
@@ -156,7 +245,7 @@
                         </div>
                         <div class="team-agents ${isCollapsed ? 'collapsed' : ''}">
                             <div class="agents-grid">
-                                ${team.agents.map(agent => renderAgentCard(agent)).join('')}
+                                ${filteredAgents.map(agent => renderAgentCard(agent)).join('')}
                             </div>
                         </div>
                     </div>
@@ -164,25 +253,33 @@
             });
 
             // Render unassigned agents if any
-            if (unassignedAgents.length > 0) {
+            const filteredUnassigned = unassignedAgents.filter(filterAgent);
+            if (filteredUnassigned.length > 0) {
+                visibleAgentCount += filteredUnassigned.length;
+
                 html += `
                     <div class="team-section">
                         <div class="team-header unassigned">
                             <div class="team-info">
                                 <h2 class="team-name">Unassigned Agents</h2>
-                                <span class="team-count">(${unassignedAgents.length} agent${unassignedAgents.length !== 1 ? 's' : ''})</span>
+                                <span class="team-count">(${filteredUnassigned.length} agent${filteredUnassigned.length !== 1 ? 's' : ''})</span>
                             </div>
                         </div>
                         <div class="team-agents">
                             <div class="agents-grid">
-                                ${unassignedAgents.map(agent => renderAgentCard(agent)).join('')}
+                                ${filteredUnassigned.map(agent => renderAgentCard(agent)).join('')}
                             </div>
                         </div>
                     </div>
                 `;
             }
 
-            container.innerHTML = html;
+            // Show message if no agents match the filter
+            if (visibleAgentCount === 0) {
+                container.innerHTML = '<div class="no-agents">No agents match the current filters</div>';
+            } else {
+                container.innerHTML = html;
+            }
         }
 
         // Fetch and display agents
@@ -297,10 +394,40 @@
             }
         }
 
+        // Setup search and filter event listeners
+        function setupEventListeners() {
+            // Search input
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    searchQuery = e.target.value.trim();
+                    renderDashboard();
+                });
+            }
+
+            // Status filter checkboxes
+            const filterCheckboxes = document.querySelectorAll('.status-filters input[type="checkbox"]');
+            filterCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    const status = e.target.value;
+                    if (e.target.checked) {
+                        statusFilters.add(status);
+                    } else {
+                        statusFilters.delete(status);
+                    }
+                    renderDashboard();
+                });
+            });
+        }
+
         // Initialize
         loadConfig();
         updateAgents();
         setInterval(updateAgents, REFRESH_INTERVAL);
+        setupEventListeners();
+
+        // Add theme toggle button event listener
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     </script>
 </body>
 </html>
