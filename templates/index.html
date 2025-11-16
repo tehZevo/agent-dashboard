@@ -18,6 +18,7 @@
                 <span class="status-legend">
                     <span class="legend-item"><span class="status-dot working"></span> Working</span>
                     <span class="legend-item"><span class="status-dot idle"></span> Idle</span>
+                    <span class="legend-item"><span class="status-dot warning"></span> Warning</span>
                     <span class="legend-item"><span class="status-dot error"></span> Error</span>
                     <span class="legend-item"><span class="status-dot stale"></span> Stale</span>
                 </span>
@@ -32,6 +33,7 @@
     <script>
         const REFRESH_INTERVAL = 2000; // Refresh every 2 seconds
         let staleTimeoutMinutes = 5;
+        let collapsedTeams = new Set(); // Track which teams are collapsed
 
         // Format datetime string
         function formatDateTime(isoString) {
@@ -69,54 +71,128 @@
             }
         }
 
+        // Toggle team collapse state
+        function toggleTeam(teamName) {
+            if (collapsedTeams.has(teamName)) {
+                collapsedTeams.delete(teamName);
+            } else {
+                collapsedTeams.add(teamName);
+            }
+            // Re-render with current data (don't fetch new data)
+            renderDashboard();
+        }
+
+        // Render agent card HTML
+        function renderAgentCard(agent) {
+            return `
+                <div class="agent-card ${agent.display_status}">
+                    <div class="agent-header">
+                        <div class="agent-id">
+                            <span class="status-dot ${agent.display_status}"></span>
+                            <strong>${escapeHtml(agent.id)}</strong>
+                        </div>
+                        <div class="status-badge ${agent.display_status}">
+                            ${escapeHtml(agent.display_label)}
+                        </div>
+                    </div>
+                    <div class="agent-message">
+                        ${escapeHtml(agent.status_message || 'No status message')}
+                    </div>
+                    <div class="agent-footer">
+                        <span class="checkin-time" title="${formatDateTime(agent.last_checkin)}">
+                            ${timeAgo(agent.last_checkin)}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Store current data for re-rendering
+        let currentData = null;
+
+        // Render the dashboard with current data
+        function renderDashboard() {
+            if (!currentData) return;
+
+            const container = document.getElementById('agents-container');
+            const teams = currentData.teams || [];
+            const unassignedAgents = currentData.unassigned_agents || [];
+            const totalAgents = currentData.agents ? currentData.agents.length : 0;
+
+            if (totalAgents === 0) {
+                container.innerHTML = '<div class="no-agents">No agents registered yet</div>';
+                return;
+            }
+
+            let html = '';
+
+            // Render teams
+            teams.forEach(team => {
+                const isCollapsed = collapsedTeams.has(team.name);
+                const chevron = isCollapsed ? '▶' : '▼';
+
+                html += `
+                    <div class="team-section">
+                        <div class="team-header ${team.status}" onclick="toggleTeam('${escapeHtml(team.name)}')">
+                            <div class="team-info">
+                                <span class="team-chevron">${chevron}</span>
+                                <span class="status-dot ${team.status}"></span>
+                                <h2 class="team-name">${escapeHtml(team.name)}</h2>
+                                <span class="team-count">(${team.agent_count} agent${team.agent_count !== 1 ? 's' : ''})</span>
+                            </div>
+                            <div class="status-badge ${team.status}">
+                                ${escapeHtml(team.label)}
+                            </div>
+                        </div>
+                        <div class="team-agents ${isCollapsed ? 'collapsed' : ''}">
+                            <div class="agents-grid">
+                                ${team.agents.map(agent => renderAgentCard(agent)).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render unassigned agents if any
+            if (unassignedAgents.length > 0) {
+                html += `
+                    <div class="team-section">
+                        <div class="team-header unassigned">
+                            <div class="team-info">
+                                <h2 class="team-name">Unassigned Agents</h2>
+                                <span class="team-count">(${unassignedAgents.length} agent${unassignedAgents.length !== 1 ? 's' : ''})</span>
+                            </div>
+                        </div>
+                        <div class="team-agents">
+                            <div class="agents-grid">
+                                ${unassignedAgents.map(agent => renderAgentCard(agent)).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
         // Fetch and display agents
         async function updateAgents() {
             try {
                 const response = await fetch('/api/agents');
                 const data = await response.json();
-                const agents = data.agents || [];
 
-                const container = document.getElementById('agents-container');
                 const agentCount = document.getElementById('agent-count');
                 const lastUpdate = document.getElementById('last-update');
 
+                const totalAgents = data.agents ? data.agents.length : 0;
+
                 // Update agent count
-                agentCount.textContent = `${agents.length} agent${agents.length !== 1 ? 's' : ''}`;
+                agentCount.textContent = `${totalAgents} agent${totalAgents !== 1 ? 's' : ''}`;
                 lastUpdate.textContent = `Last update: ${new Date().toLocaleTimeString()}`;
 
-                if (agents.length === 0) {
-                    container.innerHTML = '<div class="no-agents">No agents registered yet</div>';
-                    return;
-                }
-
-                // Build agents HTML
-                let html = '<div class="agents-grid">';
-                agents.forEach(agent => {
-                    html += `
-                        <div class="agent-card ${agent.display_status}">
-                            <div class="agent-header">
-                                <div class="agent-id">
-                                    <span class="status-dot ${agent.display_status}"></span>
-                                    <strong>${escapeHtml(agent.id)}</strong>
-                                </div>
-                                <div class="status-badge ${agent.display_status}">
-                                    ${escapeHtml(agent.display_label)}
-                                </div>
-                            </div>
-                            <div class="agent-message">
-                                ${escapeHtml(agent.status_message || 'No status message')}
-                            </div>
-                            <div class="agent-footer">
-                                <span class="checkin-time" title="${formatDateTime(agent.last_checkin)}">
-                                    ${timeAgo(agent.last_checkin)}
-                                </span>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-
-                container.innerHTML = html;
+                // Store data and render
+                currentData = data;
+                renderDashboard();
             } catch (error) {
                 console.error('Error fetching agents:', error);
                 document.getElementById('agents-container').innerHTML =

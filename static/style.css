@@ -59,6 +59,95 @@ header h1 {
     min-height: 200px;
 }
 
+/* Team sections */
+.team-section {
+    background: white;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.team-header {
+    padding: 20px 25px;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s;
+    border-left: 4px solid #ccc;
+}
+
+.team-header:hover {
+    background-color: #f9fafb;
+}
+
+.team-header.working {
+    border-left-color: #10b981;
+}
+
+.team-header.idle {
+    border-left-color: #3b82f6;
+}
+
+.team-header.warning {
+    border-left-color: #f59e0b;
+}
+
+.team-header.error {
+    border-left-color: #ef4444;
+}
+
+.team-header.stale {
+    border-left-color: #9ca3af;
+}
+
+.team-header.unassigned {
+    border-left-color: #9ca3af;
+    cursor: default;
+}
+
+.team-header.unassigned:hover {
+    background-color: white;
+}
+
+.team-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.team-chevron {
+    font-size: 14px;
+    color: #666;
+    width: 20px;
+    transition: transform 0.2s;
+}
+
+.team-name {
+    font-size: 20px;
+    color: #333;
+    margin: 0;
+}
+
+.team-count {
+    font-size: 14px;
+    color: #666;
+}
+
+.team-agents {
+    padding: 0 25px 20px 25px;
+    max-height: 10000px;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+}
+
+.team-agents.collapsed {
+    max-height: 0;
+    padding: 0 25px;
+}
+
 .agents-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -85,6 +174,10 @@ header h1 {
 
 .agent-card.idle {
     border-left-color: #3b82f6;
+}
+
+.agent-card.warning {
+    border-left-color: #f59e0b;
 }
 
 .agent-card.error {
@@ -127,6 +220,10 @@ header h1 {
     background-color: #3b82f6;
 }
 
+.status-dot.warning {
+    background-color: #f59e0b;
+}
+
 .status-dot.error {
     background-color: #ef4444;
 }
@@ -161,6 +258,11 @@ header h1 {
 .status-badge.idle {
     background-color: #dbeafe;
     color: #1e40af;
+}
+
+.status-badge.warning {
+    background-color: #fef3c7;
+    color: #92400e;
 }
 
 .status-badge.error {

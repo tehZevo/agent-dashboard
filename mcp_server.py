@@ -61,6 +61,10 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "enum": ["idle", "working", "warning", "error"],
                         "description": "Current task status of the agent"
+                    },
+                    "team": {
+                        "type": "string",
+                        "description": "Optional team name for grouping agents"
                     }
                 },
                 "required": ["agent_id", "status_message", "task_status"]
@@ -99,6 +103,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         agent_id = arguments["agent_id"]
         status_message = arguments["status_message"]
         task_status = arguments["task_status"]
+        team = arguments.get("team", None)
 
         # Load current data
         data = load_agent_data()
@@ -110,12 +115,17 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
             "last_checkin": datetime.now().isoformat()
         }
 
+        # Add team if provided
+        if team:
+            data["agents"][agent_id]["team"] = team
+
         # Save data
         save_agent_data(data)
 
+        team_info = f"\nTeam: {team}" if team else ""
         return [TextContent(
             type="text",
-            text=f"Agent '{agent_id}' status updated successfully.\nStatus: {task_status}\nMessage: {status_message}"
+            text=f"Agent '{agent_id}' status updated successfully.\nStatus: {task_status}\nMessage: {status_message}{team_info}"
         )]
 
     elif name == "get_agent_status":
