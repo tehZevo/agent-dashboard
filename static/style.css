@@ -660,6 +660,46 @@ header h1 {
     color: var(--status-error);
 }
 
+/* Delete buttons */
+.delete-btn {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.delete-btn:hover {
+    background-color: #fee2e2;
+    transform: scale(1.1);
+}
+
+.delete-btn:active {
+    transform: scale(0.95);
+}
+
+.agent-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.team-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.team-delete-btn {
+    font-size: 24px;
+    padding: 6px 10px;
+}
+
 /* History visualization */
 .agent-history {
     margin-bottom: 15px;
