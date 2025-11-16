@@ -132,7 +132,9 @@ def get_agents():
             "display_status": display_status["status"],
             "display_color": display_status["color"],
             "display_label": display_status["label"],
-            "team": agent_info.get("team", None)
+            "team": agent_info.get("team", None),
+            "description": agent_info.get("description", None),
+            "role": agent_info.get("role", None)
         }
 
         agents_list.append(agent)
