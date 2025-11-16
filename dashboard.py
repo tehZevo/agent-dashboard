@@ -56,6 +56,7 @@ def get_agent_display_status(last_checkin_str: str, task_status: str) -> dict:
     status_map = {
         "idle": {"status": "idle", "color": "blue", "label": "Idle"},
         "working": {"status": "working", "color": "green", "label": "Working"},
+        "warning": {"status": "warning", "color": "yellow", "label": "Warning"},
         "error": {"status": "error", "color": "red", "label": "Error"}
     }
 

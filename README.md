@@ -5,7 +5,7 @@ A simple web-based dashboard for monitoring AI agents via the Model Context Prot
 ## Features
 
 - **Real-time agent monitoring**: View all active agents and their current status
-- **Status tracking**: Agents can report three states: idle, working, or error
+- **Status tracking**: Agents can report four states: idle, working, warning, or error
 - **Status messages**: Each agent can set a short description of what they're working on
 - **Stale detection**: Automatically marks agents as "stale" if they haven't checked in within 5 minutes
 - **Auto-refresh**: Dashboard updates every 2 seconds
@@ -69,7 +69,7 @@ Update an agent's status:
 {
   "agent_id": "agent-001",
   "status_message": "Processing user requests",
-  "task_status": "working"  // Options: "idle", "working", "error"
+  "task_status": "working"  // Options: "idle", "working", "warning", "error"
 }
 ```
 
@@ -91,6 +91,7 @@ Get all registered agents and their statuses (no parameters required).
 
 - **Working** (Green): Agent is actively processing tasks
 - **Idle** (Blue): Agent is waiting for work
+- **Warning** (Yellow): Agent is having issues but attempting to resolve them
 - **Error** (Red): Agent encountered an error
 - **Stale** (Gray): Agent hasn't checked in within 5 minutes
 

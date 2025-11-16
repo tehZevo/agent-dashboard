@@ -59,7 +59,7 @@ async def list_tools() -> list[Tool]:
                     },
                     "task_status": {
                         "type": "string",
-                        "enum": ["idle", "working", "error"],
+                        "enum": ["idle", "working", "warning", "error"],
                         "description": "Current task status of the agent"
                     }
                 },
