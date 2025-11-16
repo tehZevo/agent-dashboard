@@ -180,8 +180,13 @@
                             <span class="status-dot ${agent.display_status}"></span>
                             <strong>${escapeHtml(agent.id)}</strong>
                         </div>
-                        <div class="status-badge ${agent.display_status}">
-                            ${escapeHtml(agent.display_label)}
+                        <div class="agent-header-actions">
+                            <button class="delete-btn" onclick="deleteAgent('${escapeHtml(agent.id).replace(/'/g, "\\'")}', event)" title="Delete agent">
+                                ✕
+                            </button>
+                            <div class="status-badge ${agent.display_status}">
+                                ${escapeHtml(agent.display_label)}
+                            </div>
                         </div>
                     </div>
                     <div class="agent-message">
@@ -253,14 +258,17 @@
 
                 html += `
                     <div class="team-section">
-                        <div class="team-header ${team.status}" onclick="toggleTeam('${escapeHtml(team.name)}')">
-                            <div class="team-info">
+                        <div class="team-header ${team.status}">
+                            <div class="team-info" onclick="toggleTeam('${escapeHtml(team.name)}')">
                                 <span class="team-chevron">${chevron}</span>
                                 <span class="status-dot ${team.status}"></span>
                                 <h2 class="team-name">${escapeHtml(team.name)}</h2>
                                 <span class="team-count">(${filteredAgents.length} agent${filteredAgents.length !== 1 ? 's' : ''})</span>
                             </div>
                             <div class="team-header-right">
+                                <button class="delete-btn team-delete-btn" onclick="deleteTeam('${escapeHtml(team.name).replace(/'/g, "\\'")}', event)" title="Delete team and all agents">
+                                    ✕
+                                </button>
                                 <div class="status-badge ${team.status}">
                                     ${escapeHtml(team.label)}
                                 </div>
@@ -356,6 +364,75 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Delete agent with confirmation
+        async function deleteAgent(agentId, event) {
+            // Stop event from bubbling to parent elements
+            if (event) {
+                event.stopPropagation();
+            }
+
+            // Show confirmation dialog
+            if (!confirm(`Are you sure you want to delete agent "${agentId}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/agents/${encodeURIComponent(agentId)}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Refresh the agents display
+                    await updateAgents();
+                } else {
+                    alert(`Failed to delete agent: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('Error deleting agent:', error);
+                alert('Error deleting agent. Please try again.');
+            }
+        }
+
+        // Delete team with confirmation
+        async function deleteTeam(teamName, event) {
+            // Stop event from bubbling to parent elements
+            if (event) {
+                event.stopPropagation();
+            }
+
+            // Count agents in team for confirmation message
+            const team = currentData.teams.find(t => t.name === teamName);
+            const agentCount = team ? team.agent_count : 0;
+
+            // Show confirmation dialog
+            const message = `Are you sure you want to delete team "${teamName}" and all ${agentCount} agent${agentCount !== 1 ? 's' : ''} in it?`;
+            if (!confirm(message)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/teams/${encodeURIComponent(teamName)}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Remove team from collapsed set if it was there
+                    collapsedTeams.delete(teamName);
+                    // Refresh the agents display
+                    await updateAgents();
+                } else {
+                    alert(`Failed to delete team: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('Error deleting team:', error);
+                alert('Error deleting team. Please try again.');
+            }
         }
 
         // Load config

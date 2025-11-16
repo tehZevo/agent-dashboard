@@ -190,6 +190,44 @@ def get_config():
     })
 
 
+@app.route('/api/agents/<agent_id>', methods=['DELETE'])
+def delete_agent(agent_id):
+    """API endpoint to delete a specific agent"""
+    data = load_agent_data()
+
+    if agent_id in data.get("agents", {}):
+        del data["agents"][agent_id]
+        save_agent_data(data)
+        return jsonify({"success": True, "message": f"Agent '{agent_id}' deleted successfully"})
+    else:
+        return jsonify({"success": False, "message": f"Agent '{agent_id}' not found"}), 404
+
+
+@app.route('/api/teams/<team_name>', methods=['DELETE'])
+def delete_team(team_name):
+    """API endpoint to delete all agents in a specific team"""
+    data = load_agent_data()
+    agents = data.get("agents", {})
+
+    # Find all agents in this team
+    agents_to_delete = [agent_id for agent_id, agent_info in agents.items()
+                       if agent_info.get("team") == team_name]
+
+    if not agents_to_delete:
+        return jsonify({"success": False, "message": f"No agents found in team '{team_name}'"}), 404
+
+    # Delete all agents in the team
+    for agent_id in agents_to_delete:
+        del data["agents"][agent_id]
+
+    save_agent_data(data)
+    return jsonify({
+        "success": True,
+        "message": f"Deleted {len(agents_to_delete)} agent(s) from team '{team_name}'",
+        "deleted_count": len(agents_to_delete)
+    })
+
+
 @app.route('/api/history')
 def get_history():
     """API endpoint to get history for all agents and teams"""
