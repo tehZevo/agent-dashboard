@@ -56,6 +56,7 @@ def get_agent_display_status(last_checkin_str: str, task_status: str) -> dict:
     status_map = {
         "idle": {"status": "idle", "color": "blue", "label": "Idle"},
         "working": {"status": "working", "color": "green", "label": "Working"},
+        "warning": {"status": "warning", "color": "yellow", "label": "Warning"},
         "error": {"status": "error", "color": "red", "label": "Error"}
     }
 
@@ -75,7 +76,7 @@ def index():
 def calculate_team_status(agents):
     """
     Calculate overall team status based on individual agent statuses
-    Priority: error > working > idle > stale
+    Priority: error > warning > working > idle > stale
     """
     if not agents:
         return {"status": "empty", "color": "gray", "label": "Empty"}
@@ -85,6 +86,8 @@ def calculate_team_status(agents):
     # Priority order
     if "error" in statuses:
         return {"status": "error", "color": "red", "label": "Error"}
+    elif "warning" in statuses:
+        return {"status": "warning", "color": "yellow", "label": "Warning"}
     elif "working" in statuses:
         return {"status": "working", "color": "green", "label": "Working"}
     elif "idle" in statuses:

@@ -91,6 +91,10 @@ header h1 {
     border-left-color: #3b82f6;
 }
 
+.team-header.warning {
+    border-left-color: #f59e0b;
+}
+
 .team-header.error {
     border-left-color: #ef4444;
 }
@@ -172,6 +176,10 @@ header h1 {
     border-left-color: #3b82f6;
 }
 
+.agent-card.warning {
+    border-left-color: #f59e0b;
+}
+
 .agent-card.error {
     border-left-color: #ef4444;
 }
@@ -212,6 +220,10 @@ header h1 {
     background-color: #3b82f6;
 }
 
+.status-dot.warning {
+    background-color: #f59e0b;
+}
+
 .status-dot.error {
     background-color: #ef4444;
 }
@@ -246,6 +258,11 @@ header h1 {
 .status-badge.idle {
     background-color: #dbeafe;
     color: #1e40af;
+}
+
+.status-badge.warning {
+    background-color: #fef3c7;
+    color: #92400e;
 }
 
 .status-badge.error {

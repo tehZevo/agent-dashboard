@@ -8,7 +8,7 @@ A simple web-based dashboard for monitoring AI agents via the Model Context Prot
 - **Team organization**: Group agents into teams for better organization
 - **Collapseable teams**: Click team headers to expand/collapse team sections
 - **Team status aggregation**: Overall team status calculated from individual agent statuses
-- **Status tracking**: Agents can report three states: idle, working, or error
+- **Status tracking**: Agents can report four states: idle, working, warning, or error
 - **Status messages**: Each agent can set a short description of what they're working on
 - **Stale detection**: Automatically marks agents as "stale" if they haven't checked in within 5 minutes
 - **Auto-refresh**: Dashboard updates every 2 seconds
@@ -107,7 +107,7 @@ Update an agent's status:
 {
   "agent_id": "agent-001",
   "status_message": "Processing user requests",
-  "task_status": "working",  // Options: "idle", "working", "error"
+  "task_status": "working",  // Options: "idle", "working", "warning", "error"
   "team": "Production Team"  // Optional: assign agent to a team
 }
 ```
@@ -130,6 +130,7 @@ Get all registered agents and their statuses (no parameters required).
 
 - **Working** (Green): Agent is actively processing tasks
 - **Idle** (Blue): Agent is waiting for work
+- **Warning** (Yellow): Agent is having issues but attempting to resolve them
 - **Error** (Red): Agent encountered an error
 - **Stale** (Gray): Agent hasn't checked in within 5 minutes
 
@@ -139,7 +140,7 @@ Agents can be organized into teams by specifying a `team` parameter when updatin
 
 - Group agents by team in collapseable sections
 - Calculate overall team status based on all agents in the team
-- Team status priority (highest to lowest): Error > Working > Idle > Stale
+- Team status priority (highest to lowest): Error > Warning > Working > Idle > Stale
 - Display team member count and aggregate status
 - Show unassigned agents in a separate section
 
