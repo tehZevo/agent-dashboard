@@ -13,6 +13,9 @@ def example_agent_workflow():
 
     In a real implementation, the agent would call the MCP tools through
     the MCP protocol. This is a conceptual example showing the workflow.
+
+    NOTE: Agents only need to send their agent_id, status_message, and task_status.
+    Team assignment is configured on the dashboard side.
     """
 
     agent_id = "example-agent-001"
