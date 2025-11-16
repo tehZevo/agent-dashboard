@@ -189,11 +189,45 @@
                 const status = entry.display_status || entry.status || 'unknown';
                 const label = entry.display_label || status;
 
+                // Format tooltip with better structure
+                const tooltipText = `Status: ${label}&#10;Time: ${timeAgoStr}&#10;Message: ${message}&#10;Timestamp: ${timestamp}`;
+
                 return `<div class="history-block ${status}"
-                    title="${label} - ${timeAgoStr}&#10;${message}&#10;${timestamp}"></div>`;
+                    title="${tooltipText}"></div>`;
             }).join('');
 
             return `<div class="history-timeline">${blocks}</div>`;
+        }
+
+        // Render recent status messages
+        function renderRecentMessages(historyKey, maxMessages = 5) {
+            const history = historyData[historyKey] || [];
+            if (history.length === 0) {
+                return '<div class="recent-messages-empty">No recent messages</div>';
+            }
+
+            // Get last N messages
+            const recentMessages = history.slice(-maxMessages).reverse();
+
+            const messageItems = recentMessages.map(entry => {
+                const timestamp = timeAgo(entry.timestamp);
+                const message = escapeHtml(entry.message || 'No message');
+                const status = entry.display_status || entry.status || 'unknown';
+                const label = entry.display_label || status;
+
+                return `
+                    <div class="recent-message-item ${status}">
+                        <div class="recent-message-header">
+                            <span class="status-dot ${status}"></span>
+                            <span class="recent-message-status">${label}</span>
+                            <span class="recent-message-time">${timestamp}</span>
+                        </div>
+                        <div class="recent-message-text">${message}</div>
+                    </div>
+                `;
+            }).join('');
+
+            return `<div class="recent-messages-list">${messageItems}</div>`;
         }
 
         // Render 24h breakdown
@@ -260,6 +294,10 @@
                     </div>
                     <div class="agent-message">
                         ${escapeHtml(agent.status_message || 'No status message')}
+                    </div>
+                    <div class="agent-recent-messages">
+                        <div class="recent-messages-label">Recent Messages:</div>
+                        ${renderRecentMessages(agent.id)}
                     </div>
                     <div class="agent-breakdown">
                         <div class="breakdown-label-header">Last 24h Breakdown:</div>
