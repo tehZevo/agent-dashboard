@@ -10,7 +10,16 @@
     <div class="container">
         <header>
             <div class="header-content">
-                <h1>Agent Dashboard</h1>
+                <div class="header-top">
+                    <h1>Agent Dashboard</h1>
+                    <button id="notification-button" class="notification-button" onclick="toggleNotificationPanel()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span id="notification-badge" class="notification-badge hidden">0</span>
+                    </button>
+                </div>
                 <div class="header-info">
                     <span id="agent-count">0 agents</span>
                     <span class="separator">|</span>
@@ -61,6 +70,16 @@
             </div>
         </header>
 
+        <div id="notification-panel" class="notification-panel hidden">
+            <div class="notification-panel-header">
+                <h3>Notifications</h3>
+                <button onclick="clearAllNotifications()" class="clear-button">Clear All</button>
+            </div>
+            <div id="notification-list" class="notification-list">
+                <div class="no-notifications">No notifications</div>
+            </div>
+        </div>
+
         <div id="agents-container">
             <div class="loading">Loading agents...</div>
         </div>
@@ -95,6 +114,10 @@
         const REFRESH_INTERVAL = 2000; // Refresh every 2 seconds
         let staleTimeoutMinutes = 5;
         let collapsedTeams = new Set(); // Track which teams are collapsed
+        let previousStates = {}; // Track previous agent states for change detection
+        let notifications = []; // Store notifications
+        let notificationPermission = 'default';
+        const MAX_NOTIFICATIONS = 50; // Maximum notifications to keep
         let historyData = {}; // Store history data
         let searchQuery = '';
         let statusFilters = new Set(['working', 'idle', 'warning', 'error', 'stale']); // All statuses enabled by default
@@ -133,6 +156,197 @@
             } catch (e) {
                 return 'Unknown';
             }
+        }
+
+        // Request notification permission
+        async function requestNotificationPermission() {
+            if ('Notification' in window) {
+                const permission = await Notification.requestPermission();
+                notificationPermission = permission;
+                return permission === 'granted';
+            }
+            return false;
+        }
+
+        // Load notifications from localStorage
+        function loadNotifications() {
+            try {
+                const stored = localStorage.getItem('agent_notifications');
+                if (stored) {
+                    notifications = JSON.parse(stored);
+                    updateNotificationBadge();
+                    renderNotificationList();
+                }
+            } catch (e) {
+                console.error('Error loading notifications:', e);
+                notifications = [];
+            }
+        }
+
+        // Save notifications to localStorage
+        function saveNotifications() {
+            try {
+                localStorage.setItem('agent_notifications', JSON.stringify(notifications));
+            } catch (e) {
+                console.error('Error saving notifications:', e);
+            }
+        }
+
+        // Create a notification
+        function createNotification(agentId, status, message) {
+            const timestamp = new Date().toISOString();
+            const notification = {
+                id: Date.now() + Math.random(), // Unique ID
+                agentId,
+                status,
+                message,
+                timestamp,
+                read: false
+            };
+
+            // Add to beginning of array
+            notifications.unshift(notification);
+
+            // Limit notification count
+            if (notifications.length > MAX_NOTIFICATIONS) {
+                notifications = notifications.slice(0, MAX_NOTIFICATIONS);
+            }
+
+            saveNotifications();
+            updateNotificationBadge();
+            renderNotificationList();
+
+            // Show browser notification if permitted
+            if (notificationPermission === 'granted') {
+                const title = `Agent ${status.toUpperCase()}: ${agentId}`;
+                const options = {
+                    body: message,
+                    icon: '/static/favicon.ico',
+                    badge: '/static/favicon.ico',
+                    tag: agentId,
+                    requireInteraction: false
+                };
+
+                try {
+                    new Notification(title, options);
+                } catch (e) {
+                    console.error('Error showing notification:', e);
+                }
+            }
+        }
+
+        // Detect state changes and trigger notifications
+        function detectStateChanges(agents) {
+            if (!agents) return;
+
+            agents.forEach(agent => {
+                const currentStatus = agent.display_status;
+                const previousStatus = previousStates[agent.id];
+
+                // Only notify on transitions to error or stale states
+                if (previousStatus && previousStatus !== currentStatus) {
+                    if (currentStatus === 'error' || currentStatus === 'stale') {
+                        const message = currentStatus === 'error'
+                            ? `Error: ${agent.status_message || 'No message'}`
+                            : `Agent has not checked in for ${staleTimeoutMinutes}+ minutes`;
+                        createNotification(agent.id, currentStatus, message);
+                    }
+                }
+
+                // Update previous state
+                previousStates[agent.id] = currentStatus;
+            });
+        }
+
+        // Toggle notification panel
+        function toggleNotificationPanel() {
+            const panel = document.getElementById('notification-panel');
+            panel.classList.toggle('hidden');
+
+            // Mark all as read when opening panel
+            if (!panel.classList.contains('hidden')) {
+                markAllAsRead();
+            }
+
+            // Close panel when clicking outside
+            if (!panel.classList.contains('hidden')) {
+                setTimeout(() => {
+                    document.addEventListener('click', closeNotificationPanelOnClickOutside);
+                }, 0);
+            } else {
+                document.removeEventListener('click', closeNotificationPanelOnClickOutside);
+            }
+        }
+
+        // Close notification panel when clicking outside
+        function closeNotificationPanelOnClickOutside(event) {
+            const panel = document.getElementById('notification-panel');
+            const button = document.getElementById('notification-button');
+
+            if (!panel.contains(event.target) && !button.contains(event.target)) {
+                panel.classList.add('hidden');
+                document.removeEventListener('click', closeNotificationPanelOnClickOutside);
+            }
+        }
+
+        // Mark all notifications as read
+        function markAllAsRead() {
+            notifications.forEach(n => n.read = true);
+            saveNotifications();
+            updateNotificationBadge();
+            renderNotificationList();
+        }
+
+        // Clear all notifications
+        function clearAllNotifications() {
+            if (confirm('Clear all notifications?')) {
+                notifications = [];
+                saveNotifications();
+                updateNotificationBadge();
+                renderNotificationList();
+            }
+        }
+
+        // Update notification badge
+        function updateNotificationBadge() {
+            const unreadCount = notifications.filter(n => !n.read).length;
+            const badge = document.getElementById('notification-badge');
+
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // Render notification list
+        function renderNotificationList() {
+            const container = document.getElementById('notification-list');
+
+            if (notifications.length === 0) {
+                container.innerHTML = '<div class="no-notifications">No notifications</div>';
+                return;
+            }
+
+            const html = notifications.map(n => {
+                const statusClass = n.status === 'error' ? 'error' : 'stale';
+                const readClass = n.read ? 'read' : '';
+                return `
+                    <div class="notification-item ${statusClass} ${readClass}">
+                        <div class="notification-header">
+                            <span class="notification-agent">${escapeHtml(n.agentId)}</span>
+                            <span class="notification-time">${timeAgo(n.timestamp)}</span>
+                        </div>
+                        <div class="notification-message">
+                            <span class="status-badge ${statusClass}">${n.status}</span>
+                            ${escapeHtml(n.message)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
         }
 
         // Toggle team collapse state
@@ -349,6 +563,9 @@
                 agentCount.textContent = `${totalAgents} agent${totalAgents !== 1 ? 's' : ''}`;
                 lastUpdate.textContent = `Last update: ${new Date().toLocaleTimeString()}`;
 
+                // Detect state changes and trigger notifications
+                detectStateChanges(data.agents);
+
                 // Store data and render
                 currentData = data;
                 renderDashboard();
@@ -446,6 +663,24 @@
             }
         }
 
+        // Initialize notification system
+        async function initializeNotifications() {
+            // Load existing notifications from localStorage
+            loadNotifications();
+
+            // Request notification permission
+            if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    notificationPermission = 'granted';
+                } else if (Notification.permission === 'default') {
+                    // Request permission after a short delay to avoid blocking page load
+                    setTimeout(async () => {
+                        await requestNotificationPermission();
+                    }, 2000);
+                }
+            }
+        }
+
         // Setup search and filter event listeners
         function setupEventListeners() {
             // Search input
@@ -474,6 +709,7 @@
 
         // Initialize
         loadConfig();
+        initializeNotifications();
         updateAgents();
         setInterval(updateAgents, REFRESH_INTERVAL);
         setupEventListeners();

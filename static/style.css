@@ -86,20 +86,25 @@ header {
     border-radius: 10px;
     box-shadow: 0 4px 6px var(--shadow);
     margin-bottom: 30px;
+    position: relative;
     transition: background 0.3s ease;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 .header-content {
     flex: 1;
 }
 
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
 header h1 {
     color: var(--text-primary);
     font-size: 32px;
-    margin-bottom: 15px;
+    margin: 0;
 }
 
 .header-info {
@@ -229,6 +234,173 @@ header h1 {
     display: flex;
     align-items: center;
     gap: 5px;
+}
+
+/* Notification button */
+.notification-button {
+    position: relative;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, transform 0.1s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.notification-button:hover {
+    background: #5568d3;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.notification-button:active {
+    transform: translateY(0);
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ef4444;
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.notification-badge.hidden {
+    display: none;
+}
+
+/* Notification panel */
+.notification-panel {
+    position: absolute;
+    top: 100%;
+    right: 30px;
+    margin-top: 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    width: 400px;
+    max-height: 500px;
+    overflow: hidden;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.notification-panel.hidden {
+    display: none;
+}
+
+.notification-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.notification-panel-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.clear-button {
+    background: none;
+    border: none;
+    color: #667eea;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.clear-button:hover {
+    background: #e5e7eb;
+}
+
+.notification-list {
+    overflow-y: auto;
+    max-height: 450px;
+}
+
+.no-notifications {
+    padding: 40px 20px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+.notification-item {
+    padding: 15px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    transition: background-color 0.2s;
+    cursor: default;
+}
+
+.notification-item:last-child {
+    border-bottom: none;
+}
+
+.notification-item:hover {
+    background: #f9fafb;
+}
+
+.notification-item.read {
+    opacity: 0.6;
+}
+
+.notification-item.error {
+    border-left: 3px solid #ef4444;
+}
+
+.notification-item.stale {
+    border-left: 3px solid #f59e0b;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.notification-agent {
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.notification-time {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.notification-message {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.4;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.notification-message .status-badge {
+    flex-shrink: 0;
+    margin-top: 1px;
 }
 
 #agents-container {
@@ -623,6 +795,21 @@ header h1 {
 
     .separator {
         display: none;
+    }
+
+    .notification-panel {
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-width: calc(100vw - 20px);
+    }
+
+    .header-top {
+        flex-wrap: wrap;
+    }
+
+    header h1 {
+        font-size: 24px;
     }
 
     .history-timeline {
