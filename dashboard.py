@@ -30,11 +30,6 @@ def build_agents_list(data):
         display_status = get_display_status(info.get("last_checkin", ""), info.get("task_status", "unknown"))
         breakdown = calc_24h_breakdown(agent_id, history, info.get("task_status", "unknown"), current_time)
 
-        # Get team info from configuration (not from agent data)
-        team_info = agent_to_team.get(agent_id, None)
-        team_name = team_info["team_name"] if team_info else None
-        team_id = team_info["team_id"] if team_info else None
-
         agent = {
             "id": agent_id,
             "status_message": info.get("status_message", ""),
@@ -60,8 +55,6 @@ def build_teams_list(agents_list):
         if team_name:
             if team_name not in teams_dict:
                 teams_dict[team_name] = {
-                    "team_id": team_id,
-                    "team_description": team_info.get("team_description", ""),
                     "agents": []
                 }
             teams_dict[team_name]["agents"].append(agent)
