@@ -52,9 +52,6 @@
                 <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
                     <span id="theme-icon">🌙</span>
                 </button>
-                <button class="team-config-button" id="team-config-button" onclick="toggleTeamConfigModal()" title="Manage Teams">
-                    ⚙️ Teams
-                </button>
             </div>
         </header>
 
@@ -65,47 +62,6 @@
             </div>
             <div id="notification-list" class="notification-list">
                 <div class="no-notifications">No notifications</div>
-            </div>
-        </div>
-
-        <div id="team-config-modal" class="modal hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Team Configuration</h2>
-                    <button class="modal-close" onclick="toggleTeamConfigModal()">✕</button>
-                </div>
-                <div class="modal-body">
-                    <div class="team-config-section">
-                        <h3>Create New Team</h3>
-                        <form id="create-team-form" onsubmit="createTeam(event)">
-                            <div class="form-group">
-                                <label for="team-id-input">Team ID:</label>
-                                <input type="text" id="team-id-input" required placeholder="e.g., sales-team">
-                            </div>
-                            <div class="form-group">
-                                <label for="team-name-input">Team Name:</label>
-                                <input type="text" id="team-name-input" required placeholder="e.g., Sales Team">
-                            </div>
-                            <div class="form-group">
-                                <label for="team-description-input">Description:</label>
-                                <textarea id="team-description-input" placeholder="Optional team description"></textarea>
-                            </div>
-                            <button type="submit" class="btn-primary">Create Team</button>
-                        </form>
-                    </div>
-                    <div class="team-config-section">
-                        <h3>Existing Teams</h3>
-                        <div id="teams-list-config">
-                            <div class="loading">Loading teams...</div>
-                        </div>
-                    </div>
-                    <div class="team-config-section">
-                        <h3>All Agents</h3>
-                        <div id="all-agents-list">
-                            <div class="loading">Loading agents...</div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 

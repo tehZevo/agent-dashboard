@@ -1,0 +1,38 @@
+# Agent Dashboard Configuration
+# This file defines the valid teams and their associated agents
+
+teams:
+  - id: development
+    name: Development Team
+    description: Software development and engineering team
+    agent_ids:
+      - dev-agent-1
+      - dev-agent-2
+      - dev-agent-3
+
+  - id: operations
+    name: Operations Team
+    description: DevOps and infrastructure team
+    agent_ids:
+      - ops-agent-1
+      - ops-agent-2
+
+  - id: qa
+    name: Quality Assurance
+    description: Testing and quality assurance team
+    agent_ids:
+      - qa-agent-1
+      - qa-agent-2
+      - qa-agent-3
+      - qa-agent-4
+
+  - id: sales
+    name: Sales Team
+    description: Sales and customer relations team
+    agent_ids:
+      - sales-agent-1
+      - sales-agent-2
+
+# Agents can report to the dashboard with any ID, but only agents
+# listed in the agent_ids above will be assigned to teams.
+# Agents not listed in any team will appear in "Unassigned Agents".

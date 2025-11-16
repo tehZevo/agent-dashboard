@@ -5,9 +5,13 @@ from lib.data_io import load_data, save_data
 from lib.status import get_display_status, calc_team_status, STALE_TIMEOUT
 from lib.history import calc_24h_breakdown
 from lib.team_routes import team_bp
+from lib.config_loader import load_team_config, get_team_for_agent
 
 app = Flask(__name__)
 app.register_blueprint(team_bp)
+
+# Load team configuration from config.yaml
+teams_config, agent_to_team = load_team_config()
 
 @app.route('/')
 def index():
@@ -31,9 +35,7 @@ def build_agents_list(data):
         breakdown = calc_24h_breakdown(agent_id, history, info.get("task_status", "unknown"), current_time)
 
         # Get team info from configuration (not from agent data)
-        team_info = agent_to_team.get(agent_id, None)
-        team_name = team_info["team_name"] if team_info else None
-        team_id = team_info["team_id"] if team_info else None
+        team_name = get_team_for_agent(agent_id, agent_to_team)
 
         agent = {
             "id": agent_id,
@@ -43,7 +45,7 @@ def build_agents_list(data):
             "display_status": display_status["status"],
             "display_color": display_status["color"],
             "display_label": display_status["label"],
-            "team": info.get("team", None),
+            "team": team_name,
             "description": info.get("description", None),
             "role": info.get("role", None),
             "breakdown_24h": breakdown
@@ -60,14 +62,13 @@ def build_teams_list(agents_list):
         if team_name:
             if team_name not in teams_dict:
                 teams_dict[team_name] = {
-                    "team_id": team_id,
-                    "team_description": team_info.get("team_description", ""),
                     "agents": []
                 }
             teams_dict[team_name]["agents"].append(agent)
 
     teams_list = []
-    for name, agents in teams_dict.items():
+    for name, team_data in teams_dict.items():
+        agents = team_data["agents"]
         agents.sort(key=lambda x: x.get("last_checkin", ""), reverse=True)
         team_status = calc_team_status(agents)
         teams_list.append({

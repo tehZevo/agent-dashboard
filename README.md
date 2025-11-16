@@ -65,13 +65,25 @@ If you're using Docker (recommended), both services are already running after `d
 
 ### 1. Start the MCP Server
 
-The MCP server provides the interface for agents to communicate their status:
+The MCP server provides the interface for agents to communicate their status. You can run it using either the FastMCP CLI or directly with Python:
+
+**Using FastMCP CLI (recommended):**
+
+```bash
+fastmcp run mcp_server.py:mcp
+```
+
+**Using Python directly:**
 
 ```bash
 python mcp_server.py
 ```
 
-The server runs on stdio and can be configured in MCP client settings.
+By default, the server runs with stdio transport and can be configured in MCP client settings. You can also run it with HTTP transport for remote access:
+
+```bash
+fastmcp run mcp_server.py:mcp --transport http --port 8000
+```
 
 ### 2. Start the Web Dashboard
 
@@ -85,7 +97,22 @@ The dashboard will be available at `http://localhost:5000`
 
 ### 3. Configure MCP Client
 
-Add the MCP server to your MCP client configuration (e.g., Claude Desktop):
+Add the MCP server to your MCP client configuration (e.g., Claude Desktop). You can use either the FastMCP CLI or Python directly:
+
+**Using FastMCP CLI (recommended):**
+
+```json
+{
+  "mcpServers": {
+    "agent-dashboard": {
+      "command": "fastmcp",
+      "args": ["run", "/path/to/agent-dashboard/mcp_server.py:mcp"]
+    }
+  }
+}
+```
+
+**Using Python directly:**
 
 ```json
 {
@@ -140,68 +167,54 @@ Get all registered agents and their statuses (no parameters required).
 
 ## Team Configuration
 
-Teams are now configured centrally on the dashboard side, allowing administrators to organize agents without requiring agents to know their team assignment.
+Teams are configured via the `config.yaml` file in the project root. This allows administrators to organize agents without requiring agents to know their team assignment.
 
-### Managing Teams
+### Configuring Teams
 
-Access the Team Configuration UI by clicking the "⚙️ Teams" button in the dashboard header.
+Edit the `config.yaml` file to define teams and assign agents:
 
-**Team Management Features:**
-- **Create Teams**: Define new teams with ID, name, and optional description
-- **Assign Agents**: Use dropdown menus to assign agents to teams
-- **View Team Members**: See which agents belong to each team
-- **Delete Teams**: Remove teams (agents become unassigned)
+```yaml
+teams:
+  - id: development
+    name: Development Team
+    description: Software development and engineering team
+    agent_ids:
+      - dev-agent-1
+      - dev-agent-2
+      - dev-agent-3
 
-### Team Configuration via REST API
+  - id: operations
+    name: Operations Team
+    description: DevOps and infrastructure team
+    agent_ids:
+      - ops-agent-1
+      - ops-agent-2
+
+  - id: sales
+    name: Sales Team
+    description: Sales and customer relations team
+    agent_ids:
+      - sales-agent-1
+      - sales-agent-2
+```
+
+**Important Notes:**
+- Teams must be configured in `config.yaml` - there is no UI for creating teams
+- Agents not listed in any team's `agent_ids` will appear in "Unassigned Agents"
+- Changes to `config.yaml` require restarting the dashboard to take effect
+- Each team must have a unique `id`
+- The `name` and `description` fields are optional but recommended
+- Agents can only belong to one team
+
+### Viewing Teams via REST API
 
 #### GET /api/teams
-List all team configurations:
+List all team configurations from config.yaml:
 ```bash
 curl http://localhost:5000/api/teams
 ```
 
-#### POST /api/teams
-Create a new team:
-```bash
-curl -X POST http://localhost:5000/api/teams \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "sales-team",
-    "name": "Sales Team",
-    "description": "Sales automation agents",
-    "agent_ids": ["agent-001", "agent-002"]
-  }'
-```
-
-#### PUT /api/teams/{team_id}
-Update a team:
-```bash
-curl -X PUT http://localhost:5000/api/teams/sales-team \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Updated Sales Team",
-    "description": "Updated description",
-    "agent_ids": ["agent-001", "agent-002", "agent-003"]
-  }'
-```
-
-#### DELETE /api/teams/{team_id}
-Delete a team:
-```bash
-curl -X DELETE http://localhost:5000/api/teams/sales-team
-```
-
-#### POST /api/teams/{team_id}/agents/{agent_id}
-Add an agent to a team:
-```bash
-curl -X POST http://localhost:5000/api/teams/sales-team/agents/agent-001
-```
-
-#### DELETE /api/teams/{team_id}/agents/{agent_id}
-Remove an agent from a team:
-```bash
-curl -X DELETE http://localhost:5000/api/teams/sales-team/agents/agent-001
-```
+**Note:** The REST API only provides read access to teams. To modify teams, edit `config.yaml` and restart the dashboard.
 
 ### Team Display
 
