@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Web Dashboard - Flask application
+  dashboard:
+    build: .
+    container_name: agent-dashboard
+    ports:
+      - "5000:5000"
+    volumes:
+      # Persist agent data
+      - ./data:/app/data
+      # Mount agent_data.json to persist state
+      - ./agent_data.json:/app/agent_data.json
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    command: python dashboard.py
+
+  # MCP Server - Model Context Protocol server for agent communication
+  # Note: This service is optional and typically used when agents need to
+  # communicate via the MCP protocol. Agents can also write directly to
+  # agent_data.json if they share the volume.
+  mcp-server:
+    build: .
+    container_name: agent-mcp-server
+    volumes:
+      # Share the same data file with dashboard
+      - ./data:/app/data
+      - ./agent_data.json:/app/agent_data.json
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    command: python mcp_server.py
+
+volumes:
+  # Named volume for persistent data (optional, using bind mount above)
+  agent_data:
+    driver: local
