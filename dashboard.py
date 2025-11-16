@@ -26,10 +26,13 @@ def load_agent_data() -> dict:
                 # Ensure webhooks key exists
                 if "webhooks" not in data:
                     data["webhooks"] = []
+                # Ensure history key exists
+                if "history" not in data:
+                    data["history"] = {}
                 return data
         except (json.JSONDecodeError, IOError):
-            return {"agents": {}, "webhooks": []}
-    return {"agents": {}, "webhooks": []}
+            return {"agents": {}, "history": {}, "webhooks": []}
+    return {"agents": {}, "history": {}, "webhooks": []}
 
 
 def save_agent_data(data: dict) -> None:
@@ -185,6 +188,33 @@ def get_config():
     return jsonify({
         "stale_timeout_minutes": STALE_TIMEOUT_MINUTES
     })
+
+
+@app.route('/api/history')
+def get_history():
+    """API endpoint to get history for all agents and teams"""
+    data = load_agent_data()
+    history = data.get("history", {})
+
+    # Process history to include display status for each entry
+    processed_history = {}
+    for key, entries in history.items():
+        processed_entries = []
+        for entry in entries:
+            display_status = get_agent_display_status(
+                entry.get("timestamp", ""),
+                entry.get("status", "unknown")
+            )
+            processed_entry = {
+                **entry,
+                "display_status": display_status["status"],
+                "display_color": display_status["color"],
+                "display_label": display_status["label"]
+            }
+            processed_entries.append(processed_entry)
+        processed_history[key] = processed_entries
+
+    return jsonify(processed_history)
 
 
 @app.route('/api/webhooks', methods=['GET'])
