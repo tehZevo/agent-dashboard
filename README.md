@@ -5,6 +5,8 @@ A simple web-based dashboard for monitoring AI agents via the Model Context Prot
 ## Features
 
 - **Real-time agent monitoring**: View all active agents and their current status
+- **Browser notifications**: Get real-time alerts when agents enter error or stale states
+- **Notification center**: View notification history and manage alerts via the notification panel
 - **Team organization**: Group agents into teams for better organization
 - **Collapseable teams**: Click team headers to expand/collapse team sections
 - **Team status aggregation**: Overall team status calculated from individual agent statuses
@@ -145,6 +147,32 @@ Agents can be organized into teams by specifying a `team` parameter when updatin
 - Show unassigned agents in a separate section
 
 Click on a team header to collapse or expand the team's agents. The collapse state persists during dashboard auto-refresh.
+
+## Notifications
+
+The dashboard includes a comprehensive notification system to alert you when agents need attention:
+
+### Browser Notifications
+
+- Automatically triggered when agents transition to **error** or **stale** states
+- Shows desktop notifications (requires browser permission)
+- Notifications include agent ID and status message
+
+### Notification Center
+
+- Click the bell icon in the top-right corner to view notification history
+- Shows up to 50 recent notifications
+- Unread notifications display a badge count
+- Opening the panel automatically marks all notifications as read
+- Clear all notifications with a single click
+- Notifications persist in browser localStorage
+
+### Notification Types
+
+- **Error notifications** (red): Agent encountered an error requiring attention
+- **Stale notifications** (yellow): Agent hasn't checked in for 5+ minutes
+
+The browser will request notification permission when you first load the dashboard. Grant permission to receive real-time alerts even when the dashboard tab is not active.
 
 ## Example Agent Client
 
