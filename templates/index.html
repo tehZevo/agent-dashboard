@@ -9,19 +9,21 @@
 <body>
     <div class="container">
         <header>
-            <h1>Agent Dashboard</h1>
-            <div class="header-info">
-                <span id="agent-count">0 agents</span>
-                <span class="separator">|</span>
-                <span id="last-update">Last update: Never</span>
-                <span class="separator">|</span>
-                <span class="status-legend">
-                    <span class="legend-item"><span class="status-dot working"></span> Working</span>
-                    <span class="legend-item"><span class="status-dot idle"></span> Idle</span>
-                    <span class="legend-item"><span class="status-dot warning"></span> Warning</span>
-                    <span class="legend-item"><span class="status-dot error"></span> Error</span>
-                    <span class="legend-item"><span class="status-dot stale"></span> Stale</span>
-                </span>
+            <div class="header-content">
+                <h1>Agent Dashboard</h1>
+                <div class="header-info">
+                    <span id="agent-count">0 agents</span>
+                    <span class="separator">|</span>
+                    <span id="last-update">Last update: Never</span>
+                    <span class="separator">|</span>
+                    <span class="status-legend">
+                        <span class="legend-item"><span class="status-dot working"></span> Working</span>
+                        <span class="legend-item"><span class="status-dot idle"></span> Idle</span>
+                        <span class="legend-item"><span class="status-dot warning"></span> Warning</span>
+                        <span class="legend-item"><span class="status-dot error"></span> Error</span>
+                        <span class="legend-item"><span class="status-dot stale"></span> Stale</span>
+                    </span>
+                </div>
             </div>
 
             <div class="controls">
@@ -53,6 +55,9 @@
                         </label>
                     </div>
                 </div>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+                    <span id="theme-icon">🌙</span>
+                </button>
             </div>
         </header>
 
@@ -62,6 +67,31 @@
     </div>
 
     <script>
+        // Theme management - Initialize before page renders
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('theme-icon');
+            if (icon) {
+                icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+            }
+        }
+
+        // Initialize theme immediately
+        initTheme();
+
         const REFRESH_INTERVAL = 2000; // Refresh every 2 seconds
         let staleTimeoutMinutes = 5;
         let collapsedTeams = new Set(); // Track which teams are collapsed
@@ -316,6 +346,9 @@
         updateAgents();
         setInterval(updateAgents, REFRESH_INTERVAL);
         setupEventListeners();
+
+        // Add theme toggle button event listener
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     </script>
 </body>
 </html>
