@@ -1,0 +1,43 @@
+[data-theme="dark"] {
+    --bg-gradient-start: #1a1f3a;
+    --bg-gradient-end: #2d1b3d;
+    --card-bg: #1f2937;
+    --card-hover-bg: #374151;
+    --text-primary: #f3f4f6;
+    --text-secondary: #d1d5db;
+    --text-tertiary: #9ca3af;
+    --text-muted: #d1d5db;
+    --border-color: #374151;
+    --separator-color: #4b5563;
+    --shadow: rgba(0, 0, 0, 0.3);
+    --shadow-hover: rgba(0, 0, 0, 0.4);
+    --badge-working-bg: #064e3b;
+    --badge-working-text: #6ee7b7;
+    --badge-idle-bg: #1e3a8a;
+    --badge-idle-text: #93c5fd;
+    --badge-warning-bg: #78350f;
+    --badge-warning-text: #fcd34d;
+    --badge-error-bg: #7f1d1d;
+    --badge-error-text: #fca5a5;
+    --badge-stale-bg: #374151;
+    --badge-stale-text: #d1d5db;
+}
+
+.theme-toggle {
+    background: none;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-primary);
+}
+
+.theme-toggle:hover {
+    background: var(--card-hover-bg);
+    transform: scale(1.05);
+}
