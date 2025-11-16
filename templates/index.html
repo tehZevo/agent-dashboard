@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Agent Dashboard</h1>
+            <div class="header-info">
+                <span id="agent-count">0 agents</span>
+                <span class="separator">|</span>
+                <span id="last-update">Last update: Never</span>
+                <span class="separator">|</span>
+                <span class="status-legend">
+                    <span class="legend-item"><span class="status-dot working"></span> Working</span>
+                    <span class="legend-item"><span class="status-dot idle"></span> Idle</span>
+                    <span class="legend-item"><span class="status-dot error"></span> Error</span>
+                    <span class="legend-item"><span class="status-dot stale"></span> Stale</span>
+                </span>
+            </div>
+        </header>
+
+        <div id="agents-container">
+            <div class="loading">Loading agents...</div>
+        </div>
+    </div>
+
+    <script>
+        const REFRESH_INTERVAL = 2000; // Refresh every 2 seconds
+        let staleTimeoutMinutes = 5;
+
+        // Format datetime string
+        function formatDateTime(isoString) {
+            if (!isoString) return 'Never';
+            try {
+                const date = new Date(isoString);
+                return date.toLocaleString();
+            } catch (e) {
+                return 'Invalid date';
+            }
+        }
+
+        // Calculate time ago
+        function timeAgo(isoString) {
+            if (!isoString) return 'Never';
+            try {
+                const date = new Date(isoString);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffSecs = Math.floor(diffMs / 1000);
+
+                if (diffMins === 0) {
+                    return `${diffSecs} seconds ago`;
+                } else if (diffMins === 1) {
+                    return '1 minute ago';
+                } else if (diffMins < 60) {
+                    return `${diffMins} minutes ago`;
+                } else {
+                    const diffHours = Math.floor(diffMins / 60);
+                    return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+                }
+            } catch (e) {
+                return 'Unknown';
+            }
+        }
+
+        // Fetch and display agents
+        async function updateAgents() {
+            try {
+                const response = await fetch('/api/agents');
+                const data = await response.json();
+                const agents = data.agents || [];
+
+                const container = document.getElementById('agents-container');
+                const agentCount = document.getElementById('agent-count');
+                const lastUpdate = document.getElementById('last-update');
+
+                // Update agent count
+                agentCount.textContent = `${agents.length} agent${agents.length !== 1 ? 's' : ''}`;
+                lastUpdate.textContent = `Last update: ${new Date().toLocaleTimeString()}`;
+
+                if (agents.length === 0) {
+                    container.innerHTML = '<div class="no-agents">No agents registered yet</div>';
+                    return;
+                }
+
+                // Build agents HTML
+                let html = '<div class="agents-grid">';
+                agents.forEach(agent => {
+                    html += `
+                        <div class="agent-card ${agent.display_status}">
+                            <div class="agent-header">
+                                <div class="agent-id">
+                                    <span class="status-dot ${agent.display_status}"></span>
+                                    <strong>${escapeHtml(agent.id)}</strong>
+                                </div>
+                                <div class="status-badge ${agent.display_status}">
+                                    ${escapeHtml(agent.display_label)}
+                                </div>
+                            </div>
+                            <div class="agent-message">
+                                ${escapeHtml(agent.status_message || 'No status message')}
+                            </div>
+                            <div class="agent-footer">
+                                <span class="checkin-time" title="${formatDateTime(agent.last_checkin)}">
+                                    ${timeAgo(agent.last_checkin)}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error fetching agents:', error);
+                document.getElementById('agents-container').innerHTML =
+                    '<div class="error">Error loading agents. Retrying...</div>';
+            }
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load config
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                staleTimeoutMinutes = config.stale_timeout_minutes || 5;
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
+
+        // Initialize
+        loadConfig();
+        updateAgents();
+        setInterval(updateAgents, REFRESH_INTERVAL);
+    </script>
+</body>
+</html>
