@@ -10,7 +10,16 @@
     <div class="container">
         <header>
             <div class="header-content">
-                <h1>Agent Dashboard</h1>
+                <div class="header-top">
+                    <h1>Agent Dashboard</h1>
+                    <button id="notification-button" class="notification-button" onclick="toggleNotificationPanel()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span id="notification-badge" class="notification-badge hidden">0</span>
+                    </button>
+                </div>
                 <div class="header-info">
                     <span id="agent-count">0 agents</span>
                     <span class="separator">|</span>
@@ -61,6 +70,16 @@
             </div>
         </header>
 
+        <div id="notification-panel" class="notification-panel hidden">
+            <div class="notification-panel-header">
+                <h3>Notifications</h3>
+                <button onclick="clearAllNotifications()" class="clear-button">Clear All</button>
+            </div>
+            <div id="notification-list" class="notification-list">
+                <div class="no-notifications">No notifications</div>
+            </div>
+        </div>
+
         <div id="agents-container">
             <div class="loading">Loading agents...</div>
         </div>
@@ -98,6 +117,12 @@
         let historyData = {}; // Store history data
         let searchQuery = '';
         let statusFilters = new Set(['working', 'idle', 'warning', 'error', 'stale']); // All statuses enabled by default
+
+        // Notification system
+        let previousStates = {}; // Track previous agent states for change detection
+        let notifications = []; // Store notifications
+        let notificationPermission = 'default';
+        const MAX_NOTIFICATIONS = 50; // Maximum notifications to keep
 
         // Format datetime string
         function formatDateTime(isoString) {
@@ -349,6 +374,11 @@
                 agentCount.textContent = `${totalAgents} agent${totalAgents !== 1 ? 's' : ''}`;
                 lastUpdate.textContent = `Last update: ${new Date().toLocaleTimeString()}`;
 
+                // Detect state changes for notifications
+                if (data.agents) {
+                    detectStateChanges(data.agents);
+                }
+
                 // Store data and render
                 currentData = data;
                 renderDashboard();
@@ -472,8 +502,193 @@
             });
         }
 
+        // Notification system functions
+        function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    notificationPermission = permission;
+                });
+            } else if ('Notification' in window) {
+                notificationPermission = Notification.permission;
+            }
+        }
+
+        function loadNotifications() {
+            try {
+                const stored = localStorage.getItem('agent-notifications');
+                if (stored) {
+                    notifications = JSON.parse(stored);
+                    updateNotificationBadge();
+                    renderNotificationList();
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+                notifications = [];
+            }
+        }
+
+        function saveNotifications() {
+            try {
+                // Keep only the last MAX_NOTIFICATIONS
+                if (notifications.length > MAX_NOTIFICATIONS) {
+                    notifications = notifications.slice(-MAX_NOTIFICATIONS);
+                }
+                localStorage.setItem('agent-notifications', JSON.stringify(notifications));
+            } catch (error) {
+                console.error('Error saving notifications:', error);
+            }
+        }
+
+        function createNotification(agentId, newStatus, oldStatus, message) {
+            const notification = {
+                id: Date.now() + Math.random(),
+                agentId: agentId,
+                newStatus: newStatus,
+                oldStatus: oldStatus,
+                message: message,
+                timestamp: new Date().toISOString(),
+                read: false
+            };
+
+            notifications.unshift(notification);
+            saveNotifications();
+            updateNotificationBadge();
+            renderNotificationList();
+
+            // Show browser notification if permitted
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const title = `Agent ${agentId}: ${newStatus.toUpperCase()}`;
+                const body = message || `Status changed from ${oldStatus} to ${newStatus}`;
+
+                try {
+                    const browserNotif = new Notification(title, {
+                        body: body,
+                        icon: '/static/favicon.ico',
+                        tag: agentId,
+                        requireInteraction: newStatus === 'error'
+                    });
+
+                    browserNotif.onclick = () => {
+                        window.focus();
+                        toggleNotificationPanel(true);
+                        browserNotif.close();
+                    };
+                } catch (error) {
+                    console.error('Error showing browser notification:', error);
+                }
+            }
+        }
+
+        function detectStateChanges(agents) {
+            if (!agents || agents.length === 0) return;
+
+            agents.forEach(agent => {
+                const agentId = agent.id;
+                const currentStatus = agent.display_status;
+                const previousStatus = previousStates[agentId];
+
+                // If this is a new agent or status changed
+                if (previousStatus && previousStatus !== currentStatus) {
+                    // Only notify on error or stale transitions
+                    if (currentStatus === 'error' || currentStatus === 'stale') {
+                        createNotification(
+                            agentId,
+                            currentStatus,
+                            previousStatus,
+                            agent.status_message || `Agent transitioned to ${currentStatus}`
+                        );
+                    }
+                }
+
+                // Update previous state
+                previousStates[agentId] = currentStatus;
+            });
+        }
+
+        function toggleNotificationPanel(forceOpen = false) {
+            const panel = document.getElementById('notification-panel');
+            const isHidden = panel.classList.contains('hidden');
+
+            if (forceOpen || isHidden) {
+                panel.classList.remove('hidden');
+                // Mark all as read when opening panel
+                notifications.forEach(n => n.read = true);
+                saveNotifications();
+                updateNotificationBadge();
+                renderNotificationList();
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
+        function clearAllNotifications() {
+            if (confirm('Clear all notifications?')) {
+                notifications = [];
+                saveNotifications();
+                updateNotificationBadge();
+                renderNotificationList();
+            }
+        }
+
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notification-badge');
+            const unreadCount = notifications.filter(n => !n.read).length;
+
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function renderNotificationList() {
+            const list = document.getElementById('notification-list');
+
+            if (notifications.length === 0) {
+                list.innerHTML = '<div class="no-notifications">No notifications</div>';
+                return;
+            }
+
+            list.innerHTML = notifications.map(notif => {
+                const time = timeAgo(notif.timestamp);
+                const statusClass = notif.newStatus;
+                const readClass = notif.read ? 'read' : 'unread';
+
+                return `
+                    <div class="notification-item ${statusClass} ${readClass}">
+                        <div class="notification-header">
+                            <span class="status-dot ${statusClass}"></span>
+                            <strong>${escapeHtml(notif.agentId)}</strong>
+                            <span class="notification-time">${time}</span>
+                        </div>
+                        <div class="notification-message">
+                            ${escapeHtml(notif.message)}
+                        </div>
+                        <div class="notification-status-change">
+                            ${escapeHtml(notif.oldStatus)} → ${escapeHtml(notif.newStatus)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Close notification panel when clicking outside
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('notification-panel');
+            const button = document.getElementById('notification-button');
+
+            if (!panel.classList.contains('hidden') &&
+                !panel.contains(e.target) &&
+                !button.contains(e.target)) {
+                toggleNotificationPanel();
+            }
+        });
+
         // Initialize
         loadConfig();
+        loadNotifications();
+        requestNotificationPermission();
         updateAgents();
         setInterval(updateAgents, REFRESH_INTERVAL);
         setupEventListeners();
