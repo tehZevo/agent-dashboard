@@ -5,6 +5,9 @@ A simple web-based dashboard for monitoring AI agents via the Model Context Prot
 ## Features
 
 - **Real-time agent monitoring**: View all active agents and their current status
+- **Team organization**: Group agents into teams for better organization
+- **Collapseable teams**: Click team headers to expand/collapse team sections
+- **Team status aggregation**: Overall team status calculated from individual agent statuses
 - **Status tracking**: Agents can report three states: idle, working, or error
 - **Status messages**: Each agent can set a short description of what they're working on
 - **Stale detection**: Automatically marks agents as "stale" if they haven't checked in within 5 minutes
@@ -104,7 +107,8 @@ Update an agent's status:
 {
   "agent_id": "agent-001",
   "status_message": "Processing user requests",
-  "task_status": "working"  // Options: "idle", "working", "error"
+  "task_status": "working",  // Options: "idle", "working", "error"
+  "team": "Production Team"  // Optional: assign agent to a team
 }
 ```
 
@@ -128,6 +132,18 @@ Get all registered agents and their statuses (no parameters required).
 - **Idle** (Blue): Agent is waiting for work
 - **Error** (Red): Agent encountered an error
 - **Stale** (Gray): Agent hasn't checked in within 5 minutes
+
+## Teams
+
+Agents can be organized into teams by specifying a `team` parameter when updating their status. The dashboard will:
+
+- Group agents by team in collapseable sections
+- Calculate overall team status based on all agents in the team
+- Team status priority (highest to lowest): Error > Working > Idle > Stale
+- Display team member count and aggregate status
+- Show unassigned agents in a separate section
+
+Click on a team header to collapse or expand the team's agents. The collapse state persists during dashboard auto-refresh.
 
 ## Example Agent Client
 
