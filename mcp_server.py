@@ -166,6 +166,8 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
 
         # Check if this is a new agent or status change
         is_new_agent = agent_id not in data["agents"]
+        old_status = data["agents"].get(agent_id, {}).get("task_status")
+        status_changed = not is_new_agent and old_status != task_status
 
         # Current timestamp
         now = datetime.now().isoformat()
@@ -232,10 +234,22 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
             "timestamp": now
         }
 
+        # Add previous status to webhook data if status changed
+        if status_changed:
+            webhook_data["previous_status"] = old_status
+
+        # Trigger appropriate webhooks based on status changes
         if is_new_agent:
             trigger_webhooks("agent_online", webhook_data)
         else:
+            # Always trigger general status_update for backward compatibility
             trigger_webhooks("status_update", webhook_data)
+
+            # Trigger status-specific webhooks only when status actually changes
+            if status_changed:
+                # Trigger status-specific event
+                status_event = f"status_changed_to_{task_status}"
+                trigger_webhooks(status_event, webhook_data)
 
         team_info = f"\nTeam: {team_name}" if team_name else "\nTeam: Unassigned"
         return [TextContent(

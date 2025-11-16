@@ -10,7 +10,7 @@ A simple web-based dashboard for monitoring AI agents via the Model Context Prot
 - **Team status aggregation**: Overall team status calculated from individual agent statuses
 - **Status tracking**: Agents can report four states: idle, working, warning, or error
 - **Status messages**: Each agent can set a short description of what they're working on
-- **Stale detection**: Automatically marks agents as "stale" if they haven't checked in within 5 minutes
+- **Stale detection**: Automatically marks agents as "stale" if they haven't checked in within the configured timeout (default: 5 minutes, configurable)
 - **Auto-refresh**: Dashboard updates every 2 seconds
 - **Clean web interface**: Modern, responsive design with color-coded status indicators
 - **Webhook integrations**: Subscribe to status update events via HTTP webhooks (configured via REST API or config file)
@@ -136,7 +136,7 @@ Get all registered agents and their statuses (no parameters required).
 - **Idle** (Blue): Agent is waiting for work
 - **Warning** (Yellow): Agent is having issues but attempting to resolve them
 - **Error** (Red): Agent encountered an error
-- **Stale** (Gray): Agent hasn't checked in within 5 minutes
+- **Stale** (Gray): Agent hasn't checked in within the configured timeout (default: 5 minutes)
 
 ## Team Configuration
 
@@ -252,15 +252,26 @@ The dashboard supports webhook integrations to send real-time notifications when
 
 Webhooks can subscribe to the following event types:
 
-- **status_update**: Triggered when an existing agent updates its status
+#### General Events
+- **status_update**: Triggered when an existing agent updates its status (always triggered for backward compatibility)
 - **agent_online**: Triggered when a new agent comes online (first status update)
 - **agent_offline**: Reserved for future use (agents going offline)
+
+#### Status-Specific Events
+These events are triggered only when an agent's status actually changes to the specified state:
+- **status_changed_to_idle**: Triggered when an agent transitions to idle state
+- **status_changed_to_working**: Triggered when an agent transitions to working state
+- **status_changed_to_warning**: Triggered when an agent transitions to warning state
+- **status_changed_to_error**: Triggered when an agent transitions to error state
+
+#### Special Event Types
 - **all**: Subscribe to all event types
 
 ### Webhook Payload Format
 
 Webhooks receive POST requests with the following JSON payload:
 
+#### General Status Update
 ```json
 {
   "event": "status_update",
@@ -269,6 +280,23 @@ Webhooks receive POST requests with the following JSON payload:
     "agent_id": "agent-001",
     "status_message": "Processing user requests",
     "task_status": "working",
+    "team": "Production Team",
+    "timestamp": "2025-11-16T12:34:56.789012"
+  }
+}
+```
+
+#### Status Change Event (includes previous_status)
+When an agent's status actually changes, status-specific events include the previous status:
+```json
+{
+  "event": "status_changed_to_error",
+  "timestamp": "2025-11-16T12:34:56.789012",
+  "data": {
+    "agent_id": "agent-001",
+    "status_message": "Failed to process request",
+    "task_status": "error",
+    "previous_status": "working",
     "team": "Production Team",
     "timestamp": "2025-11-16T12:34:56.789012"
   }
@@ -294,7 +322,7 @@ curl -X POST http://localhost:5000/api/webhooks \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://example.com/webhook",
-    "events": ["status_update", "agent_online"]
+    "events": ["status_update", "agent_online", "status_changed_to_error"]
   }'
 ```
 
@@ -332,7 +360,7 @@ You can also manage webhooks by directly editing the `agent_data.json` file:
   "webhooks": [
     {
       "url": "https://example.com/webhook",
-      "events": ["status_update", "agent_online"],
+      "events": ["status_update", "agent_online", "status_changed_to_error"],
       "created_at": "2025-11-16T12:34:56.789012"
     }
   ]
@@ -352,7 +380,36 @@ See `example_agent.py` for a sample implementation of how an agent can update it
 
 ## Configuration
 
-You can modify the stale timeout by editing the `STALE_TIMEOUT_MINUTES` variable in `dashboard.py` (default: 5 minutes).
+### Stale Timeout
+
+The dashboard marks agents as "stale" if they haven't checked in within a configurable timeout period. You can configure this timeout using the `STALE_TIMEOUT_MINUTES` environment variable.
+
+**Docker (docker-compose.yml):**
+
+Set the environment variable in your docker-compose.yml or via a .env file:
+
+```bash
+# In .env file or export before running docker-compose
+STALE_TIMEOUT_MINUTES=10
+```
+
+Or modify docker-compose.yml directly:
+
+```yaml
+environment:
+  - STALE_TIMEOUT_MINUTES=10
+```
+
+**Local Python:**
+
+Set the environment variable before starting the dashboard:
+
+```bash
+export STALE_TIMEOUT_MINUTES=10
+python dashboard.py
+```
+
+**Default:** If not specified, the timeout defaults to 5 minutes.
 
 ## File Structure
 

@@ -14,6 +14,8 @@ services:
       - ./agent_data.json:/app/agent_data.json
     environment:
       - PYTHONUNBUFFERED=1
+      # Timeout in minutes before marking agent as stale (default: 5)
+      - STALE_TIMEOUT_MINUTES=${STALE_TIMEOUT_MINUTES:-5}
     restart: unless-stopped
     command: python dashboard.py
 
