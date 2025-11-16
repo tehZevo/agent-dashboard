@@ -111,17 +111,135 @@ def calculate_team_status(agents):
         return {"status": "unknown", "color": "gray", "label": "Unknown"}
 
 
+def calculate_24h_breakdown(agent_id: str, history: dict, current_status: str, current_time: datetime) -> dict:
+    """
+    Calculate the percentage breakdown of time spent in each status over the last 24 hours
+
+    Returns dict with percentages for each status:
+    {
+        "working": 45.5,
+        "idle": 30.2,
+        "warning": 10.0,
+        "error": 5.3,
+        "offline": 9.0
+    }
+    """
+    # Initialize breakdown
+    breakdown = {
+        "working": 0.0,
+        "idle": 0.0,
+        "warning": 0.0,
+        "error": 0.0,
+        "offline": 0.0
+    }
+
+    # Get agent history
+    agent_history = history.get(agent_id, [])
+    if not agent_history:
+        # No history - assume offline for 24h
+        breakdown["offline"] = 100.0
+        return breakdown
+
+    # Filter history to last 24 hours
+    cutoff_time = current_time - timedelta(hours=24)
+
+    # Build timeline of status changes
+    timeline = []
+    for entry in agent_history:
+        try:
+            timestamp = datetime.fromisoformat(entry["timestamp"])
+            if timestamp >= cutoff_time:
+                status = entry.get("status", "unknown")
+                # Map status to our categories
+                if status in ["working"]:
+                    category = "working"
+                elif status in ["idle"]:
+                    category = "idle"
+                elif status in ["warning"]:
+                    category = "warning"
+                elif status in ["error"]:
+                    category = "error"
+                else:
+                    category = "offline"
+                timeline.append((timestamp, category))
+        except (ValueError, TypeError, KeyError):
+            continue
+
+    # Sort timeline by timestamp
+    timeline.sort(key=lambda x: x[0])
+
+    # If no valid history in last 24h, check if agent is currently active
+    if not timeline:
+        # Check if agent has recent check-in
+        try:
+            last_checkin = datetime.fromisoformat(agent_history[-1]["timestamp"])
+            time_diff = current_time - last_checkin
+            if time_diff > timedelta(hours=24):
+                breakdown["offline"] = 100.0
+            else:
+                # Agent is active but no status changes in 24h
+                if current_status in ["working", "idle", "warning", "error"]:
+                    breakdown[current_status] = 100.0
+                else:
+                    breakdown["offline"] = 100.0
+        except (ValueError, TypeError, KeyError, IndexError):
+            breakdown["offline"] = 100.0
+        return breakdown
+
+    # Add current status to timeline
+    timeline.append((current_time, current_status if current_status in breakdown else "offline"))
+
+    # Calculate time spent in each status
+    total_seconds = 24 * 60 * 60  # 24 hours in seconds
+
+    # Start from 24h ago
+    start_time = cutoff_time
+
+    # If first timeline entry is after cutoff, assume offline until then
+    if timeline[0][0] > start_time:
+        offline_duration = (timeline[0][0] - start_time).total_seconds()
+        breakdown["offline"] += offline_duration
+        start_time = timeline[0][0]
+
+    # Calculate duration for each status period
+    for i in range(len(timeline) - 1):
+        current_entry = timeline[i]
+        next_entry = timeline[i + 1]
+
+        status = current_entry[1]
+        duration = (next_entry[0] - current_entry[0]).total_seconds()
+
+        if status in breakdown:
+            breakdown[status] += duration
+
+    # Convert to percentages
+    for status in breakdown:
+        breakdown[status] = round((breakdown[status] / total_seconds) * 100, 1)
+
+    return breakdown
+
+
 @app.route('/api/agents')
 def get_agents():
     """API endpoint to get all agent statuses"""
     data = load_agent_data()
     agents_list = []
     teams_dict = {}
+    history = data.get("history", {})
+    current_time = datetime.now()
 
     for agent_id, agent_info in data.get("agents", {}).items():
         display_status = get_agent_display_status(
             agent_info.get("last_checkin", ""),
             agent_info.get("task_status", "unknown")
+        )
+
+        # Calculate 24h breakdown
+        breakdown_24h = calculate_24h_breakdown(
+            agent_id,
+            history,
+            agent_info.get("task_status", "unknown"),
+            current_time
         )
 
         agent = {
@@ -132,7 +250,8 @@ def get_agents():
             "display_status": display_status["status"],
             "display_color": display_status["color"],
             "display_label": display_status["label"],
-            "team": agent_info.get("team", None)
+            "team": agent_info.get("team", None),
+            "breakdown_24h": breakdown_24h
         }
 
         agents_list.append(agent)

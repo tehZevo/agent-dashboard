@@ -19,6 +19,7 @@
     --status-warning: #f59e0b;
     --status-error: #ef4444;
     --status-stale: #9ca3af;
+    --status-offline: #6b7280;
 
     /* Status badge backgrounds - light mode */
     --badge-working-bg: #d1fae5;
@@ -410,6 +411,11 @@ header h1 {
     animation: none;
 }
 
+.status-dot.offline {
+    background-color: var(--status-offline);
+    animation: none;
+}
+
 @keyframes pulse {
     0%, 100% {
         opacity: 1;
@@ -458,6 +464,95 @@ header h1 {
     line-height: 1.5;
     margin-bottom: 15px;
     min-height: 40px;
+}
+
+/* 24h Breakdown */
+.agent-breakdown {
+    margin-bottom: 15px;
+}
+
+.breakdown-label-header {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.breakdown-24h {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.breakdown-bar-container {
+    display: grid;
+    grid-template-columns: 80px 1fr 50px;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.breakdown-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.breakdown-label .status-dot {
+    width: 10px;
+    height: 10px;
+    animation: none;
+}
+
+.breakdown-bar-wrapper {
+    background-color: var(--border-color);
+    height: 18px;
+    border-radius: 9px;
+    overflow: hidden;
+    position: relative;
+}
+
+.breakdown-bar {
+    height: 100%;
+    border-radius: 9px;
+    transition: width 0.3s ease;
+}
+
+.breakdown-bar.working {
+    background: linear-gradient(90deg, var(--status-working), #059669);
+}
+
+.breakdown-bar.idle {
+    background: linear-gradient(90deg, var(--status-idle), #2563eb);
+}
+
+.breakdown-bar.warning {
+    background: linear-gradient(90deg, var(--status-warning), #d97706);
+}
+
+.breakdown-bar.error {
+    background: linear-gradient(90deg, var(--status-error), #dc2626);
+}
+
+.breakdown-bar.offline {
+    background: linear-gradient(90deg, var(--status-offline), #4b5563);
+}
+
+.breakdown-percentage {
+    text-align: right;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.breakdown-empty {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-style: italic;
 }
 
 .agent-footer {
