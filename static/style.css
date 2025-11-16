@@ -120,6 +120,28 @@ header h1 {
     gap: 15px;
 }
 
+@media (min-width: 769px) {
+    .controls {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+    }
+
+    .search-box {
+        flex: 1;
+        max-width: 300px;
+    }
+
+    .filter-controls {
+        flex: 1;
+    }
+
+    .theme-toggle {
+        flex-shrink: 0;
+        align-self: flex-start;
+    }
+}
+
 .search-box {
     width: 100%;
 }
