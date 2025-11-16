@@ -8,6 +8,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+import requests
+from concurrent.futures import ThreadPoolExecutor
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -17,22 +19,73 @@ from mcp.types import Tool, TextContent
 # Data file to store agent statuses
 DATA_FILE = Path(__file__).parent / "agent_data.json"
 
+# Thread pool for async webhook delivery
+webhook_executor = ThreadPoolExecutor(max_workers=5)
+
 
 def load_agent_data() -> dict:
     """Load agent data from JSON file"""
     if DATA_FILE.exists():
         try:
             with open(DATA_FILE, 'r') as f:
-                return json.load(f)
+                data = json.load(f)
+                # Ensure webhooks key exists
+                if "webhooks" not in data:
+                    data["webhooks"] = []
+                return data
         except (json.JSONDecodeError, IOError):
-            return {"agents": {}}
-    return {"agents": {}}
+            return {"agents": {}, "webhooks": []}
+    return {"agents": {}, "webhooks": []}
 
 
 def save_agent_data(data: dict) -> None:
     """Save agent data to JSON file"""
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
+
+
+def deliver_webhook(webhook_url: str, payload: dict) -> None:
+    """
+    Deliver a webhook payload to a URL
+    Runs in a separate thread to avoid blocking
+    """
+    try:
+        response = requests.post(
+            webhook_url,
+            json=payload,
+            timeout=10,
+            headers={"Content-Type": "application/json"}
+        )
+        response.raise_for_status()
+    except Exception as e:
+        # Log error but don't fail the status update
+        print(f"Webhook delivery failed for {webhook_url}: {str(e)}")
+
+
+def trigger_webhooks(event_type: str, data: dict) -> None:
+    """
+    Trigger all registered webhooks with the given event data
+    """
+    agent_data = load_agent_data()
+    webhooks = agent_data.get("webhooks", [])
+
+    if not webhooks:
+        return
+
+    payload = {
+        "event": event_type,
+        "timestamp": datetime.now().isoformat(),
+        "data": data
+    }
+
+    # Deliver webhooks asynchronously
+    for webhook in webhooks:
+        webhook_url = webhook.get("url")
+        webhook_events = webhook.get("events", ["all"])
+
+        # Check if webhook should receive this event
+        if "all" in webhook_events or event_type in webhook_events:
+            webhook_executor.submit(deliver_webhook, webhook_url, payload)
 
 
 # Create MCP server instance
@@ -91,6 +144,47 @@ async def list_tools() -> list[Tool]:
                 "type": "object",
                 "properties": {}
             }
+        ),
+        Tool(
+            name="add_webhook",
+            description="Register a webhook URL to receive status update notifications",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The webhook URL to call when events occur"
+                    },
+                    "events": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of event types to subscribe to. Use ['all'] for all events, or specify ['status_update', 'agent_online', 'agent_offline']"
+                    }
+                },
+                "required": ["url"]
+            }
+        ),
+        Tool(
+            name="remove_webhook",
+            description="Remove a registered webhook URL",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The webhook URL to remove"
+                    }
+                },
+                "required": ["url"]
+            }
+        ),
+        Tool(
+            name="list_webhooks",
+            description="List all registered webhook URLs",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
         )
     ]
 
@@ -108,6 +202,10 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         # Load current data
         data = load_agent_data()
 
+        # Check if this is a new agent or status change
+        is_new_agent = agent_id not in data["agents"]
+        old_status = data["agents"].get(agent_id, {}).get("task_status")
+
         # Update agent status
         data["agents"][agent_id] = {
             "status_message": status_message,
@@ -121,6 +219,20 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
 
         # Save data
         save_agent_data(data)
+
+        # Trigger webhooks
+        webhook_data = {
+            "agent_id": agent_id,
+            "status_message": status_message,
+            "task_status": task_status,
+            "team": team,
+            "timestamp": data["agents"][agent_id]["last_checkin"]
+        }
+
+        if is_new_agent:
+            trigger_webhooks("agent_online", webhook_data)
+        else:
+            trigger_webhooks("status_update", webhook_data)
 
         team_info = f"\nTeam: {team}" if team else ""
         return [TextContent(
@@ -149,6 +261,76 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         return [TextContent(
             type="text",
             text=json.dumps(data["agents"], indent=2)
+        )]
+
+    elif name == "add_webhook":
+        url = arguments["url"]
+        events = arguments.get("events", ["all"])
+
+        # Load current data
+        data = load_agent_data()
+
+        # Check if webhook already exists
+        existing = next((w for w in data["webhooks"] if w["url"] == url), None)
+        if existing:
+            return [TextContent(
+                type="text",
+                text=f"Webhook URL already registered: {url}"
+            )]
+
+        # Add new webhook
+        webhook = {
+            "url": url,
+            "events": events,
+            "created_at": datetime.now().isoformat()
+        }
+        data["webhooks"].append(webhook)
+
+        # Save data
+        save_agent_data(data)
+
+        return [TextContent(
+            type="text",
+            text=f"Webhook added successfully.\nURL: {url}\nEvents: {', '.join(events)}"
+        )]
+
+    elif name == "remove_webhook":
+        url = arguments["url"]
+
+        # Load current data
+        data = load_agent_data()
+
+        # Find and remove webhook
+        initial_count = len(data["webhooks"])
+        data["webhooks"] = [w for w in data["webhooks"] if w["url"] != url]
+
+        if len(data["webhooks"]) == initial_count:
+            return [TextContent(
+                type="text",
+                text=f"Webhook URL not found: {url}"
+            )]
+
+        # Save data
+        save_agent_data(data)
+
+        return [TextContent(
+            type="text",
+            text=f"Webhook removed successfully: {url}"
+        )]
+
+    elif name == "list_webhooks":
+        data = load_agent_data()
+        webhooks = data.get("webhooks", [])
+
+        if not webhooks:
+            return [TextContent(
+                type="text",
+                text="No webhooks registered"
+            )]
+
+        return [TextContent(
+            type="text",
+            text=json.dumps(webhooks, indent=2)
         )]
 
     else:
