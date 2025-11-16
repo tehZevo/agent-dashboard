@@ -14,6 +14,8 @@ A simple web-based dashboard for monitoring AI agents via the Model Context Prot
 - **Auto-refresh**: Dashboard updates every 2 seconds
 - **Clean web interface**: Modern, responsive design with color-coded status indicators
 - **Webhook integrations**: Subscribe to status update events via HTTP webhooks
+- **Browser notifications**: Real-time desktop notifications when agents transition to error or stale states
+- **Notification center**: View and manage recent alerts with a notification panel in the dashboard
 
 ## Installation
 
@@ -146,6 +148,36 @@ Agents can be organized into teams by specifying a `team` parameter when updatin
 - Show unassigned agents in a separate section
 
 Click on a team header to collapse or expand the team's agents. The collapse state persists during dashboard auto-refresh.
+
+## Notifications
+
+The dashboard includes a real-time notification system to alert you when agents encounter issues.
+
+### Browser Notifications
+
+- Desktop notifications appear when agents transition to **error** or **stale** states
+- Notifications are triggered by state changes (not when an agent is already in error/stale)
+- On first visit, the browser will request permission to show notifications
+- Error state notifications require interaction to dismiss for increased visibility
+- Clicking a notification brings focus to the dashboard and opens the notification panel
+
+### Notification Center
+
+- Access the notification center via the bell icon in the top-right corner of the dashboard
+- View all recent notifications with timestamps and status change details
+- Unread notifications are highlighted with a badge showing the count
+- Opening the panel automatically marks all notifications as read
+- Clear all notifications with the "Clear All" button
+- Notifications persist in browser localStorage across page refreshes
+- Maximum of 50 notifications are stored (oldest are automatically removed)
+
+### Notification Details
+
+Each notification includes:
+- **Agent ID**: Which agent triggered the notification
+- **Status change**: The transition (e.g., "working → error")
+- **Message**: The agent's status message at the time of transition
+- **Timestamp**: When the state change occurred
 
 ## Webhook Integrations
 
