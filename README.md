@@ -110,10 +110,11 @@ Update an agent's status:
 {
   "agent_id": "agent-001",
   "status_message": "Processing user requests",
-  "task_status": "working",  // Options: "idle", "working", "warning", "error"
-  "team": "Production Team"  // Optional: assign agent to a team
+  "task_status": "working"  // Options: "idle", "working", "warning", "error"
 }
 ```
+
+**Note:** Agents only need to send their `agent_id`, `status_message`, and `task_status`. Team assignment is configured on the dashboard side via the Team Configuration UI.
 
 ### get_agent_status
 
@@ -137,10 +138,74 @@ Get all registered agents and their statuses (no parameters required).
 - **Error** (Red): Agent encountered an error
 - **Stale** (Gray): Agent hasn't checked in within 5 minutes
 
-## Teams
+## Team Configuration
 
-Agents can be organized into teams by specifying a `team` parameter when updating their status. The dashboard will:
+Teams are now configured centrally on the dashboard side, allowing administrators to organize agents without requiring agents to know their team assignment.
 
+### Managing Teams
+
+Access the Team Configuration UI by clicking the "⚙️ Teams" button in the dashboard header.
+
+**Team Management Features:**
+- **Create Teams**: Define new teams with ID, name, and optional description
+- **Assign Agents**: Use dropdown menus to assign agents to teams
+- **View Team Members**: See which agents belong to each team
+- **Delete Teams**: Remove teams (agents become unassigned)
+
+### Team Configuration via REST API
+
+#### GET /api/teams
+List all team configurations:
+```bash
+curl http://localhost:5000/api/teams
+```
+
+#### POST /api/teams
+Create a new team:
+```bash
+curl -X POST http://localhost:5000/api/teams \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "sales-team",
+    "name": "Sales Team",
+    "description": "Sales automation agents",
+    "agent_ids": ["agent-001", "agent-002"]
+  }'
+```
+
+#### PUT /api/teams/{team_id}
+Update a team:
+```bash
+curl -X PUT http://localhost:5000/api/teams/sales-team \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated Sales Team",
+    "description": "Updated description",
+    "agent_ids": ["agent-001", "agent-002", "agent-003"]
+  }'
+```
+
+#### DELETE /api/teams/{team_id}
+Delete a team:
+```bash
+curl -X DELETE http://localhost:5000/api/teams/sales-team
+```
+
+#### POST /api/teams/{team_id}/agents/{agent_id}
+Add an agent to a team:
+```bash
+curl -X POST http://localhost:5000/api/teams/sales-team/agents/agent-001
+```
+
+#### DELETE /api/teams/{team_id}/agents/{agent_id}
+Remove an agent from a team:
+```bash
+curl -X DELETE http://localhost:5000/api/teams/sales-team/agents/agent-001
+```
+
+### Team Display
+
+The dashboard will:
 - Group agents by team in collapseable sections
 - Calculate overall team status based on all agents in the team
 - Team status priority (highest to lowest): Error > Warning > Working > Idle > Stale
@@ -249,7 +314,20 @@ You can also manage webhooks by directly editing the `agent_data.json` file:
 
 ```json
 {
-  "agents": {},
+  "teams": {
+    "sales-team": {
+      "name": "Sales Team",
+      "description": "Sales automation agents",
+      "agent_ids": ["agent-001", "agent-002"]
+    }
+  },
+  "agents": {
+    "agent-001": {
+      "status_message": "Processing requests",
+      "task_status": "working",
+      "last_checkin": "2025-11-16T12:34:56.789012"
+    }
+  },
   "history": {},
   "webhooks": [
     {

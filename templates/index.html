@@ -67,6 +67,9 @@
                 <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
                     <span id="theme-icon">🌙</span>
                 </button>
+                <button class="team-config-button" id="team-config-button" onclick="toggleTeamConfigModal()" title="Manage Teams">
+                    ⚙️ Teams
+                </button>
             </div>
         </header>
 
@@ -77,6 +80,47 @@
             </div>
             <div id="notification-list" class="notification-list">
                 <div class="no-notifications">No notifications</div>
+            </div>
+        </div>
+
+        <div id="team-config-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Team Configuration</h2>
+                    <button class="modal-close" onclick="toggleTeamConfigModal()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="team-config-section">
+                        <h3>Create New Team</h3>
+                        <form id="create-team-form" onsubmit="createTeam(event)">
+                            <div class="form-group">
+                                <label for="team-id-input">Team ID:</label>
+                                <input type="text" id="team-id-input" required placeholder="e.g., sales-team">
+                            </div>
+                            <div class="form-group">
+                                <label for="team-name-input">Team Name:</label>
+                                <input type="text" id="team-name-input" required placeholder="e.g., Sales Team">
+                            </div>
+                            <div class="form-group">
+                                <label for="team-description-input">Description:</label>
+                                <textarea id="team-description-input" placeholder="Optional team description"></textarea>
+                            </div>
+                            <button type="submit" class="btn-primary">Create Team</button>
+                        </form>
+                    </div>
+                    <div class="team-config-section">
+                        <h3>Existing Teams</h3>
+                        <div id="teams-list-config">
+                            <div class="loading">Loading teams...</div>
+                        </div>
+                    </div>
+                    <div class="team-config-section">
+                        <h3>All Agents</h3>
+                        <div id="all-agents-list">
+                            <div class="loading">Loading agents...</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -794,6 +838,217 @@
                 !panel.contains(e.target) &&
                 !button.contains(e.target)) {
                 toggleNotificationPanel();
+            }
+        });
+
+        // Team configuration modal functions
+        let teamsConfig = [];
+
+        async function toggleTeamConfigModal() {
+            const modal = document.getElementById('team-config-modal');
+            const isHidden = modal.classList.contains('hidden');
+
+            if (isHidden) {
+                modal.classList.remove('hidden');
+                await loadTeamConfig();
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        async function loadTeamConfig() {
+            try {
+                const [teamsResponse, agentsResponse] = await Promise.all([
+                    fetch('/api/teams'),
+                    fetch('/api/agents')
+                ]);
+
+                const teamsData = await teamsResponse.json();
+                const agentsData = await agentsResponse.json();
+
+                teamsConfig = teamsData.teams || [];
+
+                renderTeamsConfig(teamsConfig);
+                renderAllAgents(agentsData.agents || [], teamsConfig);
+            } catch (error) {
+                console.error('Error loading team config:', error);
+            }
+        }
+
+        function renderTeamsConfig(teams) {
+            const container = document.getElementById('teams-list-config');
+
+            if (teams.length === 0) {
+                container.innerHTML = '<div class="no-teams">No teams configured</div>';
+                return;
+            }
+
+            const html = teams.map(team => {
+                const agentsList = team.agent_ids.length > 0
+                    ? team.agent_ids.map(id => `<span class="agent-tag">${escapeHtml(id)}</span>`).join('')
+                    : '<span class="no-agents-tag">No agents assigned</span>';
+
+                return `
+                    <div class="team-config-item">
+                        <div class="team-config-header">
+                            <strong>${escapeHtml(team.name)}</strong>
+                            <span class="team-id-label">(${escapeHtml(team.id)})</span>
+                        </div>
+                        ${team.description ? `<div class="team-description">${escapeHtml(team.description)}</div>` : ''}
+                        <div class="team-agents-list">
+                            <strong>Agents:</strong> ${agentsList}
+                        </div>
+                        <div class="team-config-actions">
+                            <button class="btn-danger-small" onclick="deleteTeamConfig('${escapeHtml(team.id).replace(/'/g, "\\'")}')">Delete Team</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function renderAllAgents(agents, teams) {
+            const container = document.getElementById('all-agents-list');
+
+            if (agents.length === 0) {
+                container.innerHTML = '<div class="no-agents">No agents registered</div>';
+                return;
+            }
+
+            // Create a map of agent_id to team_id
+            const agentTeamMap = {};
+            teams.forEach(team => {
+                team.agent_ids.forEach(agentId => {
+                    agentTeamMap[agentId] = team.id;
+                });
+            });
+
+            const html = agents.map(agent => {
+                const currentTeamId = agentTeamMap[agent.id];
+                const teamOptions = teams.map(team =>
+                    `<option value="${escapeHtml(team.id)}" ${currentTeamId === team.id ? 'selected' : ''}>${escapeHtml(team.name)}</option>`
+                ).join('');
+
+                return `
+                    <div class="agent-config-item">
+                        <div class="agent-config-info">
+                            <span class="status-dot ${agent.display_status}"></span>
+                            <strong>${escapeHtml(agent.id)}</strong>
+                        </div>
+                        <div class="agent-team-select">
+                            <select onchange="assignAgentToTeam('${escapeHtml(agent.id).replace(/'/g, "\\'")}', this.value)">
+                                <option value="">Unassigned</option>
+                                ${teamOptions}
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        async function createTeam(event) {
+            event.preventDefault();
+
+            const teamId = document.getElementById('team-id-input').value.trim();
+            const teamName = document.getElementById('team-name-input').value.trim();
+            const teamDescription = document.getElementById('team-description-input').value.trim();
+
+            if (!teamId || !teamName) {
+                alert('Team ID and Name are required');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/teams', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: teamId,
+                        name: teamName,
+                        description: teamDescription,
+                        agent_ids: []
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Clear form
+                    document.getElementById('create-team-form').reset();
+                    // Reload team config
+                    await loadTeamConfig();
+                    // Refresh main dashboard
+                    await updateAgents();
+                } else {
+                    alert(`Failed to create team: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error creating team:', error);
+                alert('Error creating team. Please try again.');
+            }
+        }
+
+        async function deleteTeamConfig(teamId) {
+            if (!confirm(`Are you sure you want to delete team "${teamId}"? This will unassign all agents from this team.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/teams/${encodeURIComponent(teamId)}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    await loadTeamConfig();
+                    await updateAgents();
+                } else {
+                    alert(`Failed to delete team: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('Error deleting team:', error);
+                alert('Error deleting team. Please try again.');
+            }
+        }
+
+        async function assignAgentToTeam(agentId, newTeamId) {
+            try {
+                // First, remove agent from all teams
+                const removePromises = teamsConfig.map(async (team) => {
+                    if (team.agent_ids.includes(agentId)) {
+                        await fetch(`/api/teams/${encodeURIComponent(team.id)}/agents/${encodeURIComponent(agentId)}`, {
+                            method: 'DELETE'
+                        });
+                    }
+                });
+
+                await Promise.all(removePromises);
+
+                // Then, add to new team if not unassigned
+                if (newTeamId) {
+                    await fetch(`/api/teams/${encodeURIComponent(newTeamId)}/agents/${encodeURIComponent(agentId)}`, {
+                        method: 'POST'
+                    });
+                }
+
+                // Reload config and dashboard
+                await loadTeamConfig();
+                await updateAgents();
+            } catch (error) {
+                console.error('Error assigning agent to team:', error);
+                alert('Error assigning agent to team. Please try again.');
+            }
+        }
+
+        // Close modal when clicking outside
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('team-config-modal');
+            if (e.target === modal) {
+                toggleTeamConfigModal();
             }
         });
 

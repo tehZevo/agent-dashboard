@@ -23,16 +23,17 @@ def load_agent_data() -> dict:
         try:
             with open(DATA_FILE, 'r') as f:
                 data = json.load(f)
-                # Ensure webhooks key exists
+                # Ensure required keys exist
                 if "webhooks" not in data:
                     data["webhooks"] = []
-                # Ensure history key exists
                 if "history" not in data:
                     data["history"] = {}
+                if "teams" not in data:
+                    data["teams"] = {}
                 return data
         except (json.JSONDecodeError, IOError):
-            return {"agents": {}, "history": {}, "webhooks": []}
-    return {"agents": {}, "history": {}, "webhooks": []}
+            return {"agents": {}, "history": {}, "webhooks": [], "teams": {}}
+    return {"agents": {}, "history": {}, "webhooks": [], "teams": {}}
 
 
 def save_agent_data(data: dict) -> None:
@@ -84,6 +85,24 @@ def get_agent_display_status(last_checkin_str: str, task_status: str) -> dict:
 def index():
     """Render the main dashboard page"""
     return render_template('index.html')
+
+
+def get_agent_team_mapping(teams_config: dict) -> dict:
+    """
+    Create a mapping from agent_id to team info
+    Returns dict: {agent_id: {"team_id": str, "team_name": str, "team_description": str}}
+    """
+    agent_to_team = {}
+    for team_id, team_config in teams_config.items():
+        team_name = team_config.get("name", team_id)
+        team_description = team_config.get("description", "")
+        for agent_id in team_config.get("agent_ids", []):
+            agent_to_team[agent_id] = {
+                "team_id": team_id,
+                "team_name": team_name,
+                "team_description": team_description
+            }
+    return agent_to_team
 
 
 def calculate_team_status(agents):
@@ -228,6 +247,9 @@ def get_agents():
     history = data.get("history", {})
     current_time = datetime.now()
 
+    # Get agent-to-team mapping from team configuration
+    agent_to_team = get_agent_team_mapping(data.get("teams", {}))
+
     for agent_id, agent_info in data.get("agents", {}).items():
         display_status = get_agent_display_status(
             agent_info.get("last_checkin", ""),
@@ -242,6 +264,11 @@ def get_agents():
             current_time
         )
 
+        # Get team info from configuration (not from agent data)
+        team_info = agent_to_team.get(agent_id, None)
+        team_name = team_info["team_name"] if team_info else None
+        team_id = team_info["team_id"] if team_info else None
+
         agent = {
             "id": agent_id,
             "status_message": agent_info.get("status_message", ""),
@@ -250,20 +277,22 @@ def get_agents():
             "display_status": display_status["status"],
             "display_color": display_status["color"],
             "display_label": display_status["label"],
-            "team": agent_info.get("team", None),
-            "description": agent_info.get("description", None),
-            "role": agent_info.get("role", None),
+            "team": team_name,
+            "team_id": team_id,
             "breakdown_24h": breakdown_24h
         }
 
         agents_list.append(agent)
 
         # Group by team
-        team_name = agent_info.get("team", None)
         if team_name:
             if team_name not in teams_dict:
-                teams_dict[team_name] = []
-            teams_dict[team_name].append(agent)
+                teams_dict[team_name] = {
+                    "team_id": team_id,
+                    "team_description": team_info.get("team_description", ""),
+                    "agents": []
+                }
+            teams_dict[team_name]["agents"].append(agent)
 
     # Sort agents by last check-in time (most recent first)
     agents_list.sort(
@@ -273,7 +302,9 @@ def get_agents():
 
     # Build teams list with calculated statuses
     teams_list = []
-    for team_name, team_agents in teams_dict.items():
+    for team_name, team_data in teams_dict.items():
+        team_agents = team_data["agents"]
+
         # Sort team agents by last check-in
         team_agents.sort(
             key=lambda x: x.get("last_checkin", ""),
@@ -282,7 +313,9 @@ def get_agents():
 
         team_status = calculate_team_status(team_agents)
         teams_list.append({
+            "id": team_data["team_id"],
             "name": team_name,
+            "description": team_data["team_description"],
             "agents": team_agents,
             "agent_count": len(team_agents),
             "status": team_status["status"],
@@ -324,28 +357,21 @@ def delete_agent(agent_id):
         return jsonify({"success": False, "message": f"Agent '{agent_id}' not found"}), 404
 
 
-@app.route('/api/teams/<team_name>', methods=['DELETE'])
-def delete_team(team_name):
-    """API endpoint to delete all agents in a specific team"""
+@app.route('/api/teams/<team_id>', methods=['DELETE'])
+def delete_team(team_id):
+    """API endpoint to delete a team configuration"""
     data = load_agent_data()
-    agents = data.get("agents", {})
 
-    # Find all agents in this team
-    agents_to_delete = [agent_id for agent_id, agent_info in agents.items()
-                       if agent_info.get("team") == team_name]
+    if team_id not in data.get("teams", {}):
+        return jsonify({"success": False, "message": f"Team '{team_id}' not found"}), 404
 
-    if not agents_to_delete:
-        return jsonify({"success": False, "message": f"No agents found in team '{team_name}'"}), 404
-
-    # Delete all agents in the team
-    for agent_id in agents_to_delete:
-        del data["agents"][agent_id]
+    # Remove team configuration
+    del data["teams"][team_id]
 
     save_agent_data(data)
     return jsonify({
         "success": True,
-        "message": f"Deleted {len(agents_to_delete)} agent(s) from team '{team_name}'",
-        "deleted_count": len(agents_to_delete)
+        "message": f"Team '{team_id}' deleted successfully"
     })
 
 
@@ -447,6 +473,153 @@ def remove_webhook():
     return jsonify({
         "message": "Webhook removed successfully"
     })
+
+
+@app.route('/api/teams', methods=['GET'])
+def get_teams():
+    """API endpoint to get all team configurations"""
+    data = load_agent_data()
+    teams_list = []
+
+    for team_id, team_config in data.get("teams", {}).items():
+        teams_list.append({
+            "id": team_id,
+            "name": team_config.get("name", team_id),
+            "description": team_config.get("description", ""),
+            "agent_ids": team_config.get("agent_ids", [])
+        })
+
+    return jsonify({
+        "teams": teams_list
+    })
+
+
+@app.route('/api/teams', methods=['POST'])
+def create_team():
+    """API endpoint to create a new team"""
+    team_data = request.get_json()
+
+    if not team_data or "id" not in team_data:
+        return jsonify({"error": "Team ID is required"}), 400
+
+    team_id = team_data["id"]
+    team_name = team_data.get("name", team_id)
+    team_description = team_data.get("description", "")
+    agent_ids = team_data.get("agent_ids", [])
+
+    # Load current data
+    data = load_agent_data()
+
+    # Check if team already exists
+    if team_id in data["teams"]:
+        return jsonify({"error": f"Team '{team_id}' already exists"}), 400
+
+    # Create new team
+    data["teams"][team_id] = {
+        "name": team_name,
+        "description": team_description,
+        "agent_ids": agent_ids
+    }
+
+    # Save data
+    save_agent_data(data)
+
+    return jsonify({
+        "message": "Team created successfully",
+        "team": {
+            "id": team_id,
+            "name": team_name,
+            "description": team_description,
+            "agent_ids": agent_ids
+        }
+    }), 201
+
+
+@app.route('/api/teams/<team_id>', methods=['PUT'])
+def update_team(team_id):
+    """API endpoint to update a team configuration"""
+    team_data = request.get_json()
+
+    if not team_data:
+        return jsonify({"error": "Team data is required"}), 400
+
+    # Load current data
+    data = load_agent_data()
+
+    # Check if team exists
+    if team_id not in data["teams"]:
+        return jsonify({"error": f"Team '{team_id}' not found"}), 404
+
+    # Update team
+    if "name" in team_data:
+        data["teams"][team_id]["name"] = team_data["name"]
+    if "description" in team_data:
+        data["teams"][team_id]["description"] = team_data["description"]
+    if "agent_ids" in team_data:
+        data["teams"][team_id]["agent_ids"] = team_data["agent_ids"]
+
+    # Save data
+    save_agent_data(data)
+
+    return jsonify({
+        "message": "Team updated successfully",
+        "team": {
+            "id": team_id,
+            "name": data["teams"][team_id]["name"],
+            "description": data["teams"][team_id]["description"],
+            "agent_ids": data["teams"][team_id]["agent_ids"]
+        }
+    })
+
+
+@app.route('/api/teams/<team_id>/agents/<agent_id>', methods=['POST'])
+def add_agent_to_team(team_id, agent_id):
+    """API endpoint to add an agent to a team"""
+    data = load_agent_data()
+
+    # Check if team exists
+    if team_id not in data["teams"]:
+        return jsonify({"error": f"Team '{team_id}' not found"}), 404
+
+    # Add agent to team if not already present
+    if agent_id not in data["teams"][team_id]["agent_ids"]:
+        data["teams"][team_id]["agent_ids"].append(agent_id)
+
+        # Save data
+        save_agent_data(data)
+
+        return jsonify({
+            "message": f"Agent '{agent_id}' added to team '{team_id}'"
+        })
+    else:
+        return jsonify({
+            "message": f"Agent '{agent_id}' is already in team '{team_id}'"
+        })
+
+
+@app.route('/api/teams/<team_id>/agents/<agent_id>', methods=['DELETE'])
+def remove_agent_from_team(team_id, agent_id):
+    """API endpoint to remove an agent from a team"""
+    data = load_agent_data()
+
+    # Check if team exists
+    if team_id not in data["teams"]:
+        return jsonify({"error": f"Team '{team_id}' not found"}), 404
+
+    # Remove agent from team
+    if agent_id in data["teams"][team_id]["agent_ids"]:
+        data["teams"][team_id]["agent_ids"].remove(agent_id)
+
+        # Save data
+        save_agent_data(data)
+
+        return jsonify({
+            "message": f"Agent '{agent_id}' removed from team '{team_id}'"
+        })
+    else:
+        return jsonify({
+            "error": f"Agent '{agent_id}' is not in team '{team_id}'"
+        }), 404
 
 
 if __name__ == '__main__':

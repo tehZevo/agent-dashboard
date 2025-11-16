@@ -29,16 +29,17 @@ def load_agent_data() -> dict:
         try:
             with open(DATA_FILE, 'r') as f:
                 data = json.load(f)
-                # Ensure webhooks key exists
+                # Ensure required keys exist
                 if "webhooks" not in data:
                     data["webhooks"] = []
-                # Ensure history key exists
                 if "history" not in data:
                     data["history"] = {}
+                if "teams" not in data:
+                    data["teams"] = {}
                 return data
         except (json.JSONDecodeError, IOError):
-            return {"agents": {}, "history": {}, "webhooks": []}
-    return {"agents": {}, "history": {}, "webhooks": []}
+            return {"agents": {}, "history": {}, "webhooks": [], "teams": {}}
+    return {"agents": {}, "history": {}, "webhooks": [], "teams": {}}
 
 
 def save_agent_data(data: dict) -> None:
@@ -117,18 +118,6 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "enum": ["idle", "working", "warning", "error"],
                         "description": "Current task status of the agent"
-                    },
-                    "team": {
-                        "type": "string",
-                        "description": "Optional team name for grouping agents"
-                    },
-                    "description": {
-                        "type": "string",
-                        "description": "Optional description of the agent's purpose and capabilities"
-                    },
-                    "role": {
-                        "type": "string",
-                        "description": "Optional role name for the agent (e.g., 'Data Processor', 'API Handler')"
                     }
                 },
                 "required": ["agent_id", "status_message", "task_status"]
@@ -167,9 +156,6 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         agent_id = arguments["agent_id"]
         status_message = arguments["status_message"]
         task_status = arguments["task_status"]
-        team = arguments.get("team", None)
-        description = arguments.get("description", None)
-        role = arguments.get("role", None)
 
         # Load current data
         data = load_agent_data()
@@ -180,25 +166,16 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
 
         # Check if this is a new agent or status change
         is_new_agent = agent_id not in data["agents"]
-        old_status = data["agents"].get(agent_id, {}).get("task_status")
 
         # Current timestamp
         now = datetime.now().isoformat()
 
-        # Update agent status
+        # Update agent status (only status-related fields)
         data["agents"][agent_id] = {
             "status_message": status_message,
             "task_status": task_status,
             "last_checkin": now
         }
-
-        # Add optional fields if provided
-        if team:
-            data["agents"][agent_id]["team"] = team
-        if description:
-            data["agents"][agent_id]["description"] = description
-        if role:
-            data["agents"][agent_id]["role"] = role
 
         # Record history entry for agent
         if agent_id not in data["history"]:
@@ -208,13 +185,8 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         history_entry = {
             "timestamp": now,
             "status": task_status,
-            "message": status_message,
-            "team": team
+            "message": status_message
         }
-        if description:
-            history_entry["description"] = description
-        if role:
-            history_entry["role"] = role
 
         data["history"][agent_id].append(history_entry)
 
@@ -222,9 +194,16 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
         if len(data["history"][agent_id]) > 100:
             data["history"][agent_id] = data["history"][agent_id][-100:]
 
+        # Find team for this agent and record team history
+        team_name = None
+        for team_id, team_config in data.get("teams", {}).items():
+            if agent_id in team_config.get("agent_ids", []):
+                team_name = team_config.get("name", team_id)
+                break
+
         # Record history entry for team if agent belongs to one
-        if team:
-            team_history_key = f"team:{team}"
+        if team_name:
+            team_history_key = f"team:{team_name}"
             if team_history_key not in data["history"]:
                 data["history"][team_history_key] = []
 
@@ -234,10 +213,6 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
                 "message": status_message,
                 "agent_id": agent_id
             }
-            if description:
-                team_history_entry["description"] = description
-            if role:
-                team_history_entry["role"] = role
 
             data["history"][team_history_key].append(team_history_entry)
 
@@ -253,25 +228,19 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
             "agent_id": agent_id,
             "status_message": status_message,
             "task_status": task_status,
-            "team": team,
-            "timestamp": data["agents"][agent_id]["last_checkin"]
+            "team": team_name,
+            "timestamp": now
         }
-        if description:
-            webhook_data["description"] = description
-        if role:
-            webhook_data["role"] = role
 
         if is_new_agent:
             trigger_webhooks("agent_online", webhook_data)
         else:
             trigger_webhooks("status_update", webhook_data)
 
-        team_info = f"\nTeam: {team}" if team else ""
-        description_info = f"\nDescription: {description}" if description else ""
-        role_info = f"\nRole: {role}" if role else ""
+        team_info = f"\nTeam: {team_name}" if team_name else "\nTeam: Unassigned"
         return [TextContent(
             type="text",
-            text=f"Agent '{agent_id}' status updated successfully.\nStatus: {task_status}\nMessage: {status_message}{team_info}{description_info}{role_info}"
+            text=f"Agent '{agent_id}' status updated successfully.\nStatus: {task_status}\nMessage: {status_message}{team_info}"
         )]
 
     elif name == "get_agent_status":
